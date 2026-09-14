@@ -6,6 +6,8 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 
+import { failureForStatus, type FailureKind } from "../failure";
+
 let cached: Anthropic | null = null;
 
 export function anthropic(): Anthropic {
@@ -21,25 +23,19 @@ export function setAnthropicForTesting(client: Anthropic | null): void {
   cached = client;
 }
 
-/** Coarse failure kinds. Never a provider body, a stack trace or a key. */
-export type FailureKind =
-  | "unauthorized"
-  | "rate_limited"
-  | "overloaded"
-  | "timeout"
-  | "refusal"
-  | "malformed"
-  | "unavailable"
-  | "internal";
-
+/**
+ * Anthropic's errors, translated into the shared taxonomy.
+ *
+ * The SDK's typed error classes are more precise than a status code, so they
+ * are preferred where they exist and `failureForStatus` covers the rest.
+ */
 export function classifyFailure(error: unknown): FailureKind {
   if (error instanceof Anthropic.AuthenticationError) return "unauthorized";
   if (error instanceof Anthropic.RateLimitError) return "rate_limited";
   if (error instanceof Anthropic.APIConnectionTimeoutError) return "timeout";
   if (error instanceof Anthropic.APIConnectionError) return "unavailable";
   if (error instanceof Anthropic.APIError) {
-    if (error.status !== undefined && error.status >= 500) return "overloaded";
-    return "unavailable";
+    return error.status === undefined ? "unavailable" : failureForStatus(error.status);
   }
   if (error instanceof Error && error.name === "AbortError") return "timeout";
   return "internal";

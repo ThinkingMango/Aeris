@@ -253,7 +253,8 @@ on the day you want to launch.
 | `NEXT_PUBLIC_SUPABASE_URL` | from §1.2 |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | from §1.2 |
 | `SUPABASE_SERVICE_ROLE_KEY` | from §1.2 |
-| `ANTHROPIC_API_KEY` | from `console.anthropic.com` → API Keys |
+| `AERIS_AI_PROVIDER` | `google` |
+| `GEMINI_API_KEY` | from [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | `BILLING_ENABLED` | `true` when you are ready to sell, `false` until then |
 | `PADDLE_ENVIRONMENT` | `production` (or `sandbox` while testing) |
 | `PADDLE_API_KEY` | from §2.3 |
@@ -290,6 +291,44 @@ conversation is being lost when the instance recycles — a deployment that
 looks perfectly healthy from the outside. `auth: false` means Supabase is not
 configured and there is no row-level security. `missing` names environment
 variables, never their values.
+
+---
+
+## 3.4 Run the safety evaluation before you trust the model
+
+This is a gate, not a formality. `docs/05` requires the safety evaluation to be
+re-run whenever the conversation or classifier model changes, and the migration
+to Gemini is exactly that change.
+
+```sh
+GEMINI_API_KEY=... npm run eval:safety
+```
+
+It runs 20 fixtures through whichever classifier is configured and reports two
+numbers that mean different things:
+
+- **Misses** — a crisis message read below its floor. Somebody who needed a
+  redirect would not have got one. The suite fails on one, and the right
+  response is to not ship, not to adjust the fixture.
+- **Over-escalations** — ordinary worry routed upward. Not dangerous, but a
+  product that sends every panic attack to an emergency number is one people
+  stop telling the truth to. Budgeted at two across the set.
+
+Several fixtures are regressions from real bugs: a panic presentation that an
+earlier rule escalated to a medical emergency, a reassurance-seeking question
+the wedge depends on reading correctly, and method-seeking wrapped in a fiction
+frame. A new model is exactly as likely to get these wrong again.
+
+**The ten-times-cheaper option.** `gemini-3.1-flash-lite` is $0.30/$2.50 per
+million against Pro's $2/$12, and the classifier runs on every message, so it
+is the largest saving available in the product. It is deliberately not the
+default. Set `AERIS_CLASSIFIER_MODEL=gemini-3.1-flash-lite`, run the evaluation
+against it, and adopt it only if the miss count is zero.
+
+**If you need to go back.** Set `AERIS_AI_PROVIDER=anthropic` and supply
+`ANTHROPIC_API_KEY`. The Anthropic adapter is complete, shares the same
+classifier rubric and the same output guards, and a unit test asserts the
+reversal keeps working.
 
 ---
 
@@ -376,5 +415,5 @@ detail; this is the checklist.
       promised on every plan
 - [ ] Paddle domain approval granted (§2.5)
 - [ ] Production SMTP connected (§1.6)
-- [ ] The safety evaluation re-run against the deployed `promptVersion` and
-      `safetyRulesVersion` reported by `/api/health`
+- [ ] `npm run eval:safety` passing with **zero misses**, against the exact
+      `ai.classifier` string reported by `/api/health` on the deployed build

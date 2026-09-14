@@ -34,16 +34,59 @@ export interface LexicalRule {
 }
 
 /**
- * Lowercases, straightens apostrophes, and reduces punctuation to spaces so
- * that word-boundary patterns behave the same on "I'm", "I’m" and "Im".
+ * Expanded negations, rewritten to their contracted form.
+ *
+ * Every rule below is written contracted — `don't`, `can't`, `i'm` — because
+ * that is how people usually type. That left a real hole: "I do not want to
+ * live anymore" matched nothing, while "I don't want to live anymore" matched
+ * the highest-certainty rule in the file. Somebody writing carefully, or
+ * writing English as a second language, was less likely to be detected than
+ * somebody typing casually, which is close to the worst possible way for a
+ * crisis floor to be wrong.
+ *
+ * Fixed here rather than in the patterns because there were six of them and
+ * the seventh would have been written contracted too. Normalising the input is
+ * the same move the apostrophe straightening above already makes: keep the
+ * rules simple by making the text predictable.
+ */
+const EXPANDED_NEGATIONS: readonly (readonly [RegExp, string])[] = Object.freeze([
+  [/\bcan ?not\b/g, "can't"],
+  [/\bdo not\b/g, "don't"],
+  [/\bdoes not\b/g, "doesn't"],
+  [/\bdid not\b/g, "didn't"],
+  [/\bcould not\b/g, "couldn't"],
+  [/\bwill not\b/g, "won't"],
+  [/\bwould not\b/g, "wouldn't"],
+  [/\bshould not\b/g, "shouldn't"],
+  [/\bhave not\b/g, "haven't"],
+  [/\bhas not\b/g, "hasn't"],
+  [/\bis not\b/g, "isn't"],
+  [/\bare not\b/g, "aren't"],
+  [/\bwas not\b/g, "wasn't"],
+  // "i am" before any "am not" handling, so "i am not suicidal" reaches the
+  // denial scanner as "i'm not suicidal" and is still read as a denial.
+  [/\bi am\b/g, "i'm"],
+  [/\bwhat is\b/g, "what's"],
+  [/\bit is\b/g, "it's"],
+  [/\bthere is\b/g, "there's"],
+]);
+
+/**
+ * Lowercases, straightens apostrophes, contracts expanded negations, and
+ * reduces punctuation to spaces so that word-boundary patterns behave the same
+ * on "I'm", "I’m", "Im" and "I am".
  */
 export function normalize(text: string): string {
-  return text
+  let out = text
     .toLowerCase()
     .replace(/[‘’ʼ`]/g, "'")
     .replace(/[^a-z0-9'\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  for (const [pattern, replacement] of EXPANDED_NEGATIONS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ */

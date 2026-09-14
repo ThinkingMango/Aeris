@@ -17,7 +17,8 @@ docs/     the founding documents — market, product, plan, strategy, architectu
 src/
   core/           the domain. Pure TypeScript, no I/O, no framework.
   db/             Drizzle schema, migrations, and the row-level security policies
-  server/ai/      Claude integration: prompts, classifier, streaming turn
+  server/ai/      the model layer: shared prompts and classifier rubric, two
+                  interchangeable provider adapters, and the safety evaluation
   server/repo/    storage behind one interface: in-memory and Postgres
   server/supabase/ auth clients and token refresh
   server/billing/ Paddle: status normalisation, checkout, portal, webhook
@@ -67,12 +68,12 @@ Everything that decides anything lives here, and none of it can reach a database
 ```sh
 npm install
 cp .env.example .env.local    # everything can stay blank to start
-npm test                      # 287 unit tests, no infrastructure needed
+npm test                      # 322 unit tests, no infrastructure needed
 npm run typecheck
 npm run dev
 ```
 
-**It runs with nothing configured.** No database, no Supabase project, no API key. Storage falls back to an in-memory store and the conversation answers from reviewed copy. Add `ANTHROPIC_API_KEY` to `.env.local` to get real replies; add `DATABASE_URL` and the Supabase keys when you want a session to survive a restart.
+**It runs with nothing configured.** No database, no Supabase project, no API key. Storage falls back to an in-memory store and the conversation answers from reviewed copy. Add `GEMINI_API_KEY` to `.env.local` to get real replies; add `DATABASE_URL` and the Supabase keys when you want a session to survive a restart.
 
 The test suite needs no database, no API key and no network: the domain is pure, which is the whole reason it is worth having.
 
@@ -85,6 +86,7 @@ The test suite needs no database, no API key and no network: the domain is pure,
 | `npm run db:generate` | Generate a migration from the schema |
 | `npm run db:deploy` | Run migrations, then apply the RLS policies |
 | `npm run db:policies` | Re-apply `src/db/policies.sql` alone (idempotent) |
+| `npm run eval:safety` | The safety evaluation. Real API calls. Run before changing the classifier model |
 
 ---
 
@@ -100,8 +102,10 @@ Built and working end to end:
 - **Supabase Auth**: anonymous sign-in, so nothing is typed to start, and an email upgrade that keeps the same account
 - **Paddle billing**: server-created checkout, customer portal, and a signature-verified webhook that is the only thing able to grant access
 - the entry flow, the account screen, and the safety paths that bypass the model entirely
+- **two interchangeable model providers** — Google Gemini by default, Anthropic Claude one environment variable away, sharing one classifier rubric and one set of safety guards
+- a **safety evaluation** with 20 fixtures that fails on a single miss against the crisis set
 
-287 unit tests. Deployment is documented step by step in [`docs/06-deployment.md`](docs/06-deployment.md).
+322 unit tests, plus a safety evaluation (`npm run eval:safety`) that makes real API calls and is run on demand. Deployment is documented step by step in [`docs/06-deployment.md`](docs/06-deployment.md).
 
 Still to build: onboarding, the anxiety map screen (`core/insights` is built and tested; there is no UI), Teams seats, practitioner links, and the legal documents. Sequenced in `docs/05-greenfield-architecture.md` section 6.
 

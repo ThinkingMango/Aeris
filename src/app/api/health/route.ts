@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { COVERED_COUNTRIES } from "@/core/copy/index";
-import { PROMPT_VERSION } from "@/server/ai/models";
+import {
+  aiProvider,
+  classifierVersion,
+  conversationModel,
+  PROMPT_VERSION,
+} from "@/server/ai/models";
 import { SAFETY_RULES_VERSION } from "@/core/safety/risk";
 import { billingConfig, billingReadiness } from "@/server/billing/config";
 import { isSupabaseConfigured } from "@/server/supabase/config";
@@ -35,6 +40,14 @@ export function GET(): NextResponse {
       environment: process.env["APP_ENV"] ?? "unset",
       promptVersion: PROMPT_VERSION,
       safetyRulesVersion: SAFETY_RULES_VERSION,
+      // Which model is actually answering people. Named here because after an
+      // incident this is the first question, and reconstructing it from a
+      // deploy log and an environment variable is not an answer.
+      ai: {
+        provider: aiProvider(),
+        conversationModel: conversationModel(),
+        classifier: classifierVersion(),
+      },
       crisisCountries: COVERED_COUNTRIES.length,
       storage: repositoryKind(),
       auth: isSupabaseConfigured(),

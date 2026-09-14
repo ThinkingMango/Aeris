@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 
 import { evaluateDeterministic, isSelfSufficient } from "./deterministic";
+import { normalize } from "./lexicon";
 import { fromClassifier, merge, type ClassifierReading } from "./merge";
 import { createStreamGuard, scanOutput } from "./output-guards";
 import { RiskLevel, actionForLevel, makeDecision, routeFor, strongerAction } from "./risk";
@@ -317,5 +318,69 @@ describe("output guards", () => {
     const guard = createStreamGuard({ seekingReassurance: true });
     expect(guard.push("That sounds hard.")).toBeNull();
     expect(guard.finish()).toContain("reassurance_without_uncertainty");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Contractions                                                        */
+/* ------------------------------------------------------------------ */
+
+describe("expanded negations reach the same floor as contracted ones", () => {
+  /**
+   * A real miss, found by typing a sentence at a running server rather than by
+   * reading the file. Every rule in the lexicon is written contracted, so
+   * "I do not want to live anymore" matched nothing at all while
+   * "I don't want to live anymore" matched the highest-certainty rule there is.
+   *
+   * The person more likely to be missed was the one writing carefully, or
+   * writing English as a second language. That is close to the worst possible
+   * way for a crisis floor to be wrong, so each pair is asserted as a pair —
+   * the two phrasings must land in the same place, not merely both be "high".
+   */
+  const samePlace = (contracted: string, expanded: string): void => {
+    const a = evaluateDeterministic(contracted);
+    const b = evaluateDeterministic(expanded);
+    expect(a.floor?.level, `contracted form found no floor: ${contracted}`).toBeDefined();
+    expect(b.floor?.level, `expanded form found no floor: ${expanded}`).toBe(a.floor?.level);
+    expect(b.certainty).toBe(a.certainty);
+  };
+
+  it("treats a stated wish to die identically either way", () => {
+    samePlace("I don't want to live anymore", "I do not want to live anymore");
+    samePlace("I don't want to be here anymore", "I do not want to be here anymore");
+  });
+
+  it("treats exhaustion phrasing identically either way", () => {
+    samePlace("I can't go on", "I cannot go on");
+    samePlace("I can't go on", "I can not go on");
+    samePlace("I can't take this anymore", "I cannot take this anymore");
+  });
+
+  it("treats self-label and burden phrasing identically either way", () => {
+    samePlace("I'm suicidal", "I am suicidal");
+    samePlace("I'm a burden", "I am a burden");
+  });
+
+  it("still reads an expanded denial as a denial", () => {
+    // The rewrite must not break the other direction: "I am not suicidal"
+    // has to keep reaching the denial scanner, or a person volunteering that
+    // they are safe gets treated as though they had said the opposite.
+    const contracted = evaluateDeterministic("I'm not suicidal, just exhausted");
+    const expanded = evaluateDeterministic("I am not suicidal, just exhausted");
+    expect(expanded.certainty).toBe(contracted.certainty);
+    expect(expanded.floor?.level).toBe(contracted.floor?.level);
+  });
+
+  it("does not invent matches in ordinary sentences", () => {
+    // The rewrite is a blunt instrument, so it is checked for collateral: an
+    // ordinary worry must not acquire a floor because of it.
+    expect(evaluateDeterministic("I do not think I can finish this report").floor).toBeNull();
+    expect(evaluateDeterministic("It is not going to be easy but I am trying").floor).toBeNull();
+  });
+
+  it("normalises the expanded form to the contracted one", () => {
+    expect(normalize("I do not want to live")).toBe("i don't want to live");
+    expect(normalize("I cannot go on")).toBe("i can't go on");
+    expect(normalize("I am a burden")).toBe("i'm a burden");
   });
 });

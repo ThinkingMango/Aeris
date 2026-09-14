@@ -18,10 +18,12 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:policies": "node scripts/apply-policies.mjs",
-    "db:deploy": "drizzle-kit migrate && node scripts/apply-policies.mjs"
+    "db:deploy": "drizzle-kit migrate && node scripts/apply-policies.mjs",
+    "eval:safety": "AERIS_RUN_EVAL=1 vitest run src/server/ai/eval"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
+    "@google/genai": "^2.22.0",
     "@paddle/paddle-js": "^1.6.5",
     "@paddle/paddle-node-sdk": "^3.10.0",
     "@supabase/ssr": "^0.7.0",
