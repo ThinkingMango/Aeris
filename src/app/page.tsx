@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AI_DISCLOSURE, BOUNDARY_STATEMENT } from "@/core/copy/index";
 
 /**
@@ -19,6 +21,12 @@ export default function Home() {
         It will not tell you everything is fine. It cannot know that, and being told is what keeps
         the loop running.
       </p>
+      <div className="row">
+        <Link className="primary" href="/help">
+          Help me now
+        </Link>
+      </div>
+
       <p className="note">
         {BOUNDARY_STATEMENT} {AI_DISCLOSURE}
       </p>

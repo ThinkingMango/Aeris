@@ -81,6 +81,16 @@ The test suite needs no database, no API key and no network: the domain is pure,
 
 ## Status
 
-The domain core, the Claude integration, the database schema and a minimal application shell are built and tested. The product surface — onboarding, the session screen, the exercise players, the anxiety map, billing — is the next stage, sequenced in `docs/05-greenfield-architecture.md` section 6.
+Built and working end to end:
 
-Nothing here is deployed, and no production database exists yet.
+- the domain core, the Claude integration and the database schema
+- the **session screen**: streaming replies, staged thinking, choices, the offer, reassessment
+- all **five exercise players**, covering the ten exercises
+- the **delay timer**, with a server-held clock that a reload cannot restart
+- the entry flow, and the safety paths that bypass the model entirely
+
+`npm run dev` works with no database and no API key. Without a key the classifier fails, the safety gate returns its constrained route, and the app answers from reviewed copy rather than generating unsupervised — the fail-closed design doing its job rather than an error.
+
+Still to build: Postgres behind the repository interface, Supabase Auth, onboarding, the anxiety map screen, billing, and the legal documents. Sequenced in `docs/05-greenfield-architecture.md` section 6.
+
+Nothing is deployed and no production database exists.

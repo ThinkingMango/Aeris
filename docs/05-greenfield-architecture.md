@@ -31,7 +31,7 @@ The brand stays Aeris. Only the codebase is new.
 | AI | **Anthropic Claude** (`claude-opus-5`) | Native tool use with strict schemas, prompt caching on a stable prefix, and adaptive thinking. See section 4. |
 | Payments | **Paddle** (Merchant of Record) | A Hong Kong company selling subscriptions to the UK, EU and Australia would otherwise have to register for VAT and GST in each. Paddle absorbs that entirely. Stripe is the better API; it is not worth multi-jurisdiction tax registration for a solo founder. |
 | Hosting | **Vercel** | Edge-adjacent streaming, preview deployments, and it is where Next.js is least surprising. |
-| Styling | **Tailwind v4 + shadcn/ui** | Fast to build, easy for an agent to edit, and the design tokens from the Ambient Minimalism language map onto it directly. |
+| Styling | **Plain CSS against design tokens** | Amended from Tailwind + shadcn/ui after building the first ten components. These are bespoke, token-driven surfaces — a breathing circle, a countdown, a two-column sort — not the dense utility compositions a framework pays off on. Revisit when there are enough screens to earn the build surface. |
 | Analytics | **PostHog EU**, consent-gated | EU residency, event allowlist, never carries message text. |
 | Testing | **Vitest** (unit), **Playwright** (journeys) | The core is pure, so unit tests cover the rules that matter without any infrastructure. |
 
@@ -198,10 +198,10 @@ Retention is finite and enforced by a scheduled job: safety events 12 months, sa
 
 | Stage | Contents | Why first |
 |---|---|---|
-| **1. Core** *(this commit)* | `src/core/**` and its tests; schema; AI layer | The rules are the product. They are pure, so they can be finished and proven before a single screen exists. |
-| 2. Data and auth | Migrations, RLS policies, Supabase Auth, onboarding | Nothing can be tried by a real person until an account exists |
-| 3. The session | Help-now entry, intensity, streaming conversation, intervention players, reassess, summary | The core loop |
-| 4. The wedge | Urge capture, delay timer, uncertainty-tolerance exercise, urge metrics | The reason to choose Aeris over ChatGPT |
+| **1. Core** *(built)* | `src/core/**` and its tests; schema; AI layer | The rules are the product. They are pure, so they can be finished and proven before a single screen exists. |
+| 2. Data and auth *(half built)* | The repository interface and an in-memory store are in place, so the product runs with no infrastructure. Postgres, RLS policies and Supabase Auth are the remaining half. | Nothing can be tried by a real person until an account exists |
+| 3. The session *(built)* | Help-now entry, intensity, streaming conversation, five exercise players, reassess | The core loop |
+| 4. The wedge *(built)* | Urge capture, server-held delay timer, uncertainty-tolerance exercise | The reason to choose Aeris over ChatGPT |
 | 5. The map | Insights screen from `core/insights` | The reason to pay |
 | 6. Commerce | Paddle, entitlements, Teams seats, Practitioner links | The revenue layer from `04-viable-options.md` |
 | 7. Compliance | Legal documents, disclosure, per-message flag, crisis registry expansion, export and deletion | Required before launch, not after |
