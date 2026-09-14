@@ -1,0 +1,79 @@
+/*
+ * Ambient Minimalism, as tokens.
+ *
+ * Warm daylight, mineral colour, generous space. The interface should lower
+ * the emotional temperature before it asks for any attention.
+ */
+:root {
+  color-scheme: light dark;
+
+  --surface: #f3f5f1;
+  --surface-raised: #f8f9f6;
+  --text: #1b2422;
+  --text-muted: #5b6b64;
+  --accent: #708d80;
+  --line: rgba(27, 36, 34, 0.08);
+
+  --radius: 20px;
+  --measure: 34rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #111917;
+    --surface-raised: #1a2522;
+    --text: #e7ece9;
+    --text-muted: #9aaaa3;
+    --accent: #91ae9f;
+    --line: rgba(231, 236, 233, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: 400 17px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 14vh 24px 10vh;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin: 0 0 1rem;
+}
+
+p {
+  margin: 0 0 1.1rem;
+  color: var(--text-muted);
+  max-width: 32rem;
+}
+
+.note {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

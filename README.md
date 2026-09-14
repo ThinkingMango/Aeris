@@ -1,37 +1,86 @@
 # Aeris
 
-**An AI that learns your anxiety patterns and helps you interrupt them when they happen.**
+**An AI that learns your anxiety patterns and helps you interrupt them.**
 
-Aeris is a wellness self-help product for adults with anxious thoughts, overthinking and uncertainty. At the moment anxiety hits, it asks what is happening, notices the likely thinking pattern in plain language, guides one short evidence-based exercise, checks whether it helped, and over weeks learns when, about what, and with which tools the person's anxiety tends to show up and ease. It is not therapy, not diagnosis, and not an emergency service, and it is built so that it cannot pretend to be.
+Aeris is a wellness self-help product for adults with anxious thoughts, overthinking and uncertainty. At the moment anxiety hits it asks what is happening, notices the thinking pattern in plain language, guides one short evidence-based exercise, checks whether it helped, and over weeks builds a picture of when anxiety shows up, what it tends to be about, and which tools actually work for that person.
 
-## What this repository is
+It is not therapy, not diagnosis, and not an emergency service, and it is built so that it cannot pretend to be.
 
-This repository holds the **founding product documents** for Aeris: the market and regulatory deep dive, the MVP specification and current-state audit, and the 30-day build-and-launch plan.
+**The thing that makes it different:** it will not reassure you. Most people arriving at an anxiety app want to be told it is fine. Being told is what keeps the loop running — relief lasts minutes, and the next check comes sooner. Aeris names the wish, separates what is known from what is predicted, and offers to wait the urge out instead.
 
-The **application code** lives in a separate repository, `ThinkingMango/aeris-calm-foundation`, which is connected to Lovable and deployed on Vercel. That codebase is substantially built: authentication, onboarding, the conversation engine, a tested safety layer, five interventions, session summaries and pattern aggregation, Paddle billing, a Privacy Center with export and deletion, retention enforcement, and release-candidate gating. The documents here were written against a direct audit of that code on 13 September 2026.
+---
+
+## Repository layout
+
+```
+docs/     the founding documents — market, product, plan, strategy, architecture
+src/
+  core/       the domain. Pure TypeScript, no I/O, no framework. 98% covered.
+  db/         Drizzle schema
+  server/ai/  Claude integration: prompts, classifier, streaming turn
+  app/        Next.js App Router
+```
+
+### `src/core` — the domain
+
+Everything that decides anything lives here, and none of it can reach a database, a network, or a framework. That rule is enforced by a test, not a convention.
+
+| Module | What it owns |
+|---|---|
+| `safety/` | The risk ladder, deterministic phrase floors, classifier merge, and the output guards that run on the live stream |
+| `conversation/` | The state machine, the model turn contract, and the pacing budgets that stop the conversation circling |
+| `interventions/` | Ten app-owned exercises, pattern routing, and effectiveness-aware ranking |
+| `patterns/` | The non-clinical taxonomy, evidence thresholds, and conservative aggregation |
+| `urges/` | The wedge: reassurance detection, urge targets, the delay ladder |
+| `insights/` | The anxiety map, with a stated threshold per section |
+| `entitlements/` | Plans and capabilities, failing closed |
+| `copy/` | Reviewed replies and the crisis registry |
+
+### Three invariants worth knowing before changing anything
+
+1. **A deterministic safety floor can be raised, never lowered.** Literal crisis language sets a minimum risk level before any model is consulted, so a classifier outage cannot produce a miss.
+2. **The client never chooses the next state.** The server reads the stored state, computes the legal moves, and rejects anything else — including anything the model proposes. A degraded turn can never move someone into the safety hold.
+3. **Message text lives in exactly one table.** No safety event, metric, log line or telemetry record has a field capable of holding what a person typed.
+
+---
 
 ## Documents
 
 | Document | What it answers |
 |---|---|
-| [`docs/01-product-deep-dive.md`](docs/01-product-deep-dive.md) | Is this a viable business, against whom, under which rules? Market reality, competitor teardown with real user complaints, clinical grounding for the toolkit, regulatory boundaries for the US, UK, EU, Hong Kong and Singapore, platform policies, monetization and unit economics, positioning, risks. |
-| [`docs/02-mvp-spec.md`](docs/02-mvp-spec.md) | What is actually built, what is missing against the five MVP capabilities, and the specification of only the gaps: the Personal Anxiety Map, effectiveness-aware intervention selection, streaming feel, voice input, safety coverage, legal documents, analytics. Includes the conversation contract, intervention library, AI architecture and cost model, database schema and safety architecture as built. |
-| [`docs/03-30-day-launch-plan.md`](docs/03-30-day-launch-plan.md) | Day-by-day plan from the current release state to a certified, legally launchable, paid product: unblock and decide, RC4 certification gates, compliance and safety coverage, the Anxiety Map, private beta, Paddle go-live, launch. With Lovable prompt templates, budget, risk register, and what not to do. |
-| [`docs/04-viable-options.md`](docs/04-viable-options.md) | Which version of an anxiety app can clear US$10k MRR? Nine options scored on willingness to pay, the gap a general chatbot leaves, fit with the build, time to revenue, solo feasibility, regulation and ceiling. Recommends a barbell: a reassurance-seeking consumer wedge, a Hong Kong SME team plan and a practitioner plan for revenue, and an NGO track for credibility. With a 90-day validation plan and kill criteria. |
-| [`docs/research/`](docs/research/) | The four source memos (competitor teardown, regulatory landscape, niche wedges, B2B channels in Hong Kong and Singapore) with links for every claim. |
+| [`docs/01-product-deep-dive.md`](docs/01-product-deep-dive.md) | Is this a viable business, against whom, under which rules? Market reality, competitor teardown with real user complaints, clinical grounding, regulation across five markets, monetization, positioning. |
+| [`docs/02-mvp-spec.md`](docs/02-mvp-spec.md) | The product surface: screens, conversation contract, intervention library, safety architecture, cost model. |
+| [`docs/03-30-day-launch-plan.md`](docs/03-30-day-launch-plan.md) | Day-by-day execution to a certified, legally launchable, paid product. |
+| [`docs/04-viable-options.md`](docs/04-viable-options.md) | Which version clears US$10k MRR. Nine options scored; recommends a reassurance-seeking consumer wedge plus a Hong Kong SME and practitioner revenue layer. |
+| [`docs/05-greenfield-architecture.md`](docs/05-greenfield-architecture.md) | This codebase: stack decisions with rationale, module boundaries, the streaming turn design, schema, and the decisions recorded so they are not relitigated. |
+| [`docs/research/`](docs/research/) | Four source memos with a link for every claim. |
 
-## The five MVP capabilities
+---
 
-1. **Help me now.** Text (and browser voice) conversation → 1–10 intensity → understand → name the pattern → one 2–5 minute tool → reassess → summary. Built.
-2. **A journal that needs almost no journaling.** Trigger, thought, what helped and next step are extracted from the conversation and confirmed by the person. Built.
-3. **Personal anxiety map.** When, about what, which thinking patterns, which tools help, intensity over time. Data foundation built; screen is the main open item.
-4. **Personalized intervention engine.** What has actually helped this person is measured and fed back into selection. Measured; ranking is a small open item.
-5. **Safety and escalation.** Deterministic risk floors plus a classifier, approved copy for medication, reality-sensitive, violence and relational turns, locale-aware crisis resources, safety never paywalled. Built and evaluated on 311 cases.
+## Getting started
 
-## Positioning in one paragraph
+```sh
+npm install
+cp .env.example .env.local    # fill in Supabase, Anthropic, Paddle
+npm test                      # 192 unit tests, no infrastructure needed
+npm run typecheck
+npm run dev
+```
 
-The consumer market for mental-wellness subscriptions is contracting and the best-funded direct competitor is free. Aeris does not compete on content or on being a companion. It competes on the five things every chatbot user complains about and no product fixes: it responds instead of acknowledging, it moves to action instead of looping, it refuses to manufacture reassurance, it remembers your patterns transparently and lets you correct them, and it handles the wide middle ground of distress that is neither "fine" nor "call a hotline". Launch markets are Hong Kong, Singapore, the United Kingdom and Australia.
+The test suite needs no database, no API key and no network: the domain is pure, which is the whole reason it is worth having.
+
+| Command | Does |
+|---|---|
+| `npm test` | Unit tests |
+| `npm run test:watch` | Watch mode |
+| `npm run typecheck` | `tsc --noEmit`, strict |
+| `npm run build` | Production build |
+| `npm run db:generate` | Generate a migration from the schema |
+
+---
 
 ## Status
 
-Founding documents v1, 13 September 2026. The application is at release candidate `rc-2026-09-11-03` plus a post-hardening checkpoint; RC4 production certification is the first phase of the plan.
+The domain core, the Claude integration, the database schema and a minimal application shell are built and tested. The product surface — onboarding, the session screen, the exercise players, the anxiety map, billing — is the next stage, sequenced in `docs/05-greenfield-architecture.md` section 6.
+
+Nothing here is deployed, and no production database exists yet.
