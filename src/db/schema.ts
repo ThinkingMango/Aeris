@@ -174,6 +174,13 @@ export const urges = pgTable(
     target: text("target").notNull(),
     intensity: smallint("intensity"),
     delayMinutes: smallint("delay_minutes"),
+    /**
+     * When the wait actually began. Set by the server on the first start and
+     * never again, so a reload cannot restart the clock and a closed tab
+     * cannot shorten it. The countdown is derived from this, not from a
+     * number the browser sends.
+     */
+    delayStartedAt: timestamp("delay_started_at", { withTimezone: true }),
     /** Null while a delay is still running. */
     resisted: boolean("resisted"),
     createdAt: now(),
@@ -285,20 +292,46 @@ export const safetyMetrics = pgTable(
 /* Commerce                                                            */
 /* ------------------------------------------------------------------ */
 
-export const subscriptions = pgTable("subscriptions", {
-  userId: uuid("user_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
-  plan: text("plan").notNull().default("free"),
-  status: text("status").notNull().default("none"),
-  /** Which environment produced this row. A sandbox event cannot touch live. */
-  environment: text("environment").notNull().default("sandbox"),
-  provider: text("provider"),
-  providerCustomerId: text("provider_customer_id"),
-  providerSubscriptionId: text("provider_subscription_id"),
-  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-  /** Set when a Teams seat, rather than a personal subscription, grants access. */
-  orgId: uuid("org_id"),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    userId: uuid("user_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
+    plan: text("plan").notNull().default("free"),
+    status: text("status").notNull().default("none"),
+    /**
+     * Which Paddle environment produced this row. A sandbox event must never
+     * touch a production account, so the environment is stored rather than
+     * assumed and every webhook checks it before writing.
+     */
+    environment: text("environment").notNull().default("sandbox"),
+    provider: text("provider"),
+    providerCustomerId: text("provider_customer_id"),
+    providerSubscriptionId: text("provider_subscription_id"),
+    /** The price actually bought. What maps a subscription back to a plan. */
+    providerPriceId: text("provider_price_id"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    /**
+     * Set when someone has cancelled but paid through the period. They keep
+     * access until it ends, and the account screen says the real date rather
+     * than implying access has already gone.
+     */
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    /**
+     * Paddle does not guarantee webhook ordering. A write carrying an event
+     * older than the stored row is discarded, so a late-arriving
+     * `subscription.created` cannot undo a `subscription.canceled` that has
+     * already landed.
+     */
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }),
+    /** Set when a Teams seat, rather than a personal subscription, grants access. */
+    orgId: uuid("org_id"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    /** The webhook arrives knowing the customer, not the user. */
+    index("subscriptions_customer_idx").on(table.providerCustomerId),
+  ],
+);
 
 /** Server-only. Deduplication, replay detection, reconciliation, audit. */
 export const billingEvents = pgTable(

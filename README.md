@@ -13,12 +13,16 @@ It is not therapy, not diagnosis, and not an emergency service, and it is built 
 ## Repository layout
 
 ```
-docs/     the founding documents — market, product, plan, strategy, architecture
+docs/     the founding documents — market, product, plan, strategy, architecture, deployment
 src/
-  core/       the domain. Pure TypeScript, no I/O, no framework. 98% covered.
-  db/         Drizzle schema
-  server/ai/  Claude integration: prompts, classifier, streaming turn
-  app/        Next.js App Router
+  core/           the domain. Pure TypeScript, no I/O, no framework.
+  db/             Drizzle schema, migrations, and the row-level security policies
+  server/ai/      Claude integration: prompts, classifier, streaming turn
+  server/repo/    storage behind one interface: in-memory and Postgres
+  server/supabase/ auth clients and token refresh
+  server/billing/ Paddle: status normalisation, checkout, portal, webhook
+  app/            Next.js App Router
+  components/     session screen, five exercise players, account
 ```
 
 ### `src/core` — the domain
@@ -53,6 +57,7 @@ Everything that decides anything lives here, and none of it can reach a database
 | [`docs/03-30-day-launch-plan.md`](docs/03-30-day-launch-plan.md) | Day-by-day execution to a certified, legally launchable, paid product. |
 | [`docs/04-viable-options.md`](docs/04-viable-options.md) | Which version clears US$10k MRR. Nine options scored; recommends a reassurance-seeking consumer wedge plus a Hong Kong SME and practitioner revenue layer. |
 | [`docs/05-greenfield-architecture.md`](docs/05-greenfield-architecture.md) | This codebase: stack decisions with rationale, module boundaries, the streaming turn design, schema, and the decisions recorded so they are not relitigated. |
+| [`docs/06-deployment.md`](docs/06-deployment.md) | Getting it live on Vercel, Supabase and Paddle. Every step, in order, with the values named as each service labels them — and the three that fail only in production. |
 | [`docs/research/`](docs/research/) | Four source memos with a link for every claim. |
 
 ---
@@ -61,11 +66,13 @@ Everything that decides anything lives here, and none of it can reach a database
 
 ```sh
 npm install
-cp .env.example .env.local    # fill in Supabase, Anthropic, Paddle
-npm test                      # 192 unit tests, no infrastructure needed
+cp .env.example .env.local    # everything can stay blank to start
+npm test                      # 287 unit tests, no infrastructure needed
 npm run typecheck
 npm run dev
 ```
+
+**It runs with nothing configured.** No database, no Supabase project, no API key. Storage falls back to an in-memory store and the conversation answers from reviewed copy. Add `ANTHROPIC_API_KEY` to `.env.local` to get real replies; add `DATABASE_URL` and the Supabase keys when you want a session to survive a restart.
 
 The test suite needs no database, no API key and no network: the domain is pure, which is the whole reason it is worth having.
 
@@ -76,6 +83,8 @@ The test suite needs no database, no API key and no network: the domain is pure,
 | `npm run typecheck` | `tsc --noEmit`, strict |
 | `npm run build` | Production build |
 | `npm run db:generate` | Generate a migration from the schema |
+| `npm run db:deploy` | Run migrations, then apply the RLS policies |
+| `npm run db:policies` | Re-apply `src/db/policies.sql` alone (idempotent) |
 
 ---
 
@@ -87,10 +96,13 @@ Built and working end to end:
 - the **session screen**: streaming replies, staged thinking, choices, the offer, reassessment
 - all **five exercise players**, covering the ten exercises
 - the **delay timer**, with a server-held clock that a reload cannot restart
-- the entry flow, and the safety paths that bypass the model entirely
+- **Postgres** behind the repository interface, with row-level security on every table
+- **Supabase Auth**: anonymous sign-in, so nothing is typed to start, and an email upgrade that keeps the same account
+- **Paddle billing**: server-created checkout, customer portal, and a signature-verified webhook that is the only thing able to grant access
+- the entry flow, the account screen, and the safety paths that bypass the model entirely
 
-`npm run dev` works with no database and no API key. Without a key the classifier fails, the safety gate returns its constrained route, and the app answers from reviewed copy rather than generating unsupervised — the fail-closed design doing its job rather than an error.
+287 unit tests. Deployment is documented step by step in [`docs/06-deployment.md`](docs/06-deployment.md).
 
-Still to build: Postgres behind the repository interface, Supabase Auth, onboarding, the anxiety map screen, billing, and the legal documents. Sequenced in `docs/05-greenfield-architecture.md` section 6.
+Still to build: onboarding, the anxiety map screen (`core/insights` is built and tested; there is no UI), Teams seats, practitioner links, and the legal documents. Sequenced in `docs/05-greenfield-architecture.md` section 6.
 
-Nothing is deployed and no production database exists.
+Nothing is deployed yet and no production database exists — but everything needed to change that is in the repository.

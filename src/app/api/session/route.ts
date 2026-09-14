@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * built from it — so it is captured at creation and never inferred later.
  */
 export async function POST(request: Request): Promise<Response> {
-  const identity = identityFor(request);
+  const identity = await identityFor(request);
   const body = await readJson(request);
 
   const session = await startSession({

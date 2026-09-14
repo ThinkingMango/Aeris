@@ -159,6 +159,7 @@ button:disabled {
 }
 
 input[type="text"],
+input[type="email"],
 textarea {
   font: inherit;
   width: 100%;
@@ -547,4 +548,67 @@ main.wide {
   .messages {
     scroll-behavior: auto;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Account                                                             */
+/* ------------------------------------------------------------------ */
+
+.panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.5rem;
+  margin: 1.4rem 0;
+}
+
+.panel h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.6rem;
+}
+
+.panel p {
+  margin: 0 0 0.7rem;
+}
+
+.panel p:last-child {
+  margin-bottom: 0;
+}
+
+.plan-name {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Confirmations are stated, not celebrated. No green, no tick, no motion:
+   this product talks to people whose nervous systems are already loud. */
+.confirm {
+  color: var(--text);
+  border-left: 2px solid var(--accent);
+  padding-left: 0.85rem;
+}
+
+.panel .row {
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.panel .row input[type="email"] {
+  flex: 1 1 14rem;
+  width: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

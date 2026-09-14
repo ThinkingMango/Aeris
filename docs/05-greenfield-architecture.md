@@ -199,11 +199,11 @@ Retention is finite and enforced by a scheduled job: safety events 12 months, sa
 | Stage | Contents | Why first |
 |---|---|---|
 | **1. Core** *(built)* | `src/core/**` and its tests; schema; AI layer | The rules are the product. They are pure, so they can be finished and proven before a single screen exists. |
-| 2. Data and auth *(half built)* | The repository interface and an in-memory store are in place, so the product runs with no infrastructure. Postgres, RLS policies and Supabase Auth are the remaining half. | Nothing can be tried by a real person until an account exists |
+| **2. Data and auth** *(built)* | Repository interface with in-memory and Postgres implementations; Drizzle migrations; `src/db/policies.sql`; Supabase Auth with anonymous sign-in and email upgrade | Nothing can be tried by a real person until an account exists |
 | 3. The session *(built)* | Help-now entry, intensity, streaming conversation, five exercise players, reassess | The core loop |
 | 4. The wedge *(built)* | Urge capture, server-held delay timer, uncertainty-tolerance exercise | The reason to choose Aeris over ChatGPT |
 | 5. The map | Insights screen from `core/insights` | The reason to pay |
-| 6. Commerce | Paddle, entitlements, Teams seats, Practitioner links | The revenue layer from `04-viable-options.md` |
+| 6. Commerce *(half built)* | Paddle checkout, portal, webhook and entitlements are in place. Teams seats and Practitioner links are not. | The revenue layer from `04-viable-options.md` |
 | 7. Compliance | Legal documents, disclosure, per-message flag, crisis registry expansion, export and deletion | Required before launch, not after |
 
 ---
@@ -217,3 +217,8 @@ Retention is finite and enforced by a scheduled job: safety events 12 months, sa
 5. **Paddle over Stripe.** Merchant of Record removes multi-jurisdiction tax registration for a Hong Kong company selling worldwide.
 6. **Append-only `session_events`.** Auditability and a pure aggregation fold, for the cost of one extra table.
 7. **The wedge is in the schema from commit one.** Retrofitting `urges` after launch would mean a migration on live health data for the feature the business case depends on.
+8. **Supabase anonymous sign-in, not a cookie we invent.** The entry flow cannot ask anyone to sign up, but RLS needs `auth.uid()` to be a real thing. An anonymous user is both: no friction, a real row in `auth.users`, and `updateUser({ email })` later converts it in place — same id, so a person's history follows them to their permanent account instead of being migrated.
+9. **The transaction pooler, with `prepare: false`.** Serverless opens a connection per instance; the direct port exhausts Postgres's limit under load and is refused in production. Prepared statements do not survive a transaction-mode pooler, so preparation is off. Both fail only under concurrency, which is to say only in production.
+10. **Entitlements are read from our database, never from Paddle.** A conversation turn must not wait on a billing API and must not be refused because one is unavailable. The webhook writes; the turn reads one indexed row.
+11. **Webhook replay is stopped by a unique index, and a failed event can be re-claimed.** Two concurrent deliveries both asking "have I seen this?" would both hear no. And a guard that rejected retries would make every processing failure permanent — so `failed` is the one status that may be claimed again.
+12. **Plain CSS, not Tailwind.** Recorded here because it reverses what §1 originally said: after ten bespoke components — a breathing circle, a countdown, a two-column sort — a utility framework was earning nothing and adding build surface.

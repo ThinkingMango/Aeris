@@ -28,12 +28,7 @@ import {
 } from "@/core/interventions/ranking";
 import { isDisplayable } from "@/core/patterns/evidence";
 import { isPattern, type Pattern } from "@/core/patterns/taxonomy";
-import {
-  checkAllowance,
-  entitlementsFor,
-  periodStart,
-  summariseUsage,
-} from "@/core/entitlements";
+import { checkAllowance, periodStart } from "@/core/entitlements";
 import { runSafetyGate, type CopyRoute, type SafetyRoute } from "@/core/safety";
 import {
   detectReassuranceSeeking,
@@ -42,6 +37,7 @@ import {
   type UrgeTarget,
 } from "@/core/urges";
 
+import { usageAndAccessFor } from "../billing/access";
 import { classifyMessage } from "../ai/classify";
 import { restrictedGuidance } from "../ai/prompt";
 import { runTurn } from "../ai/turn";
@@ -183,11 +179,11 @@ export async function runSessionTurn(input: RunSessionTurnInput): Promise<Sessio
 
   const preferences = await repo.getPreferences(input.userId);
   const period = periodStart();
-  const used = await repo.countGuidedSessions(input.userId, period);
-  // Plans are stage two; every account is Free until billing exists.
-  const entitlements = entitlementsFor("free", "none");
+  // Read from our own database rather than from Paddle: a turn must not wait
+  // on a billing API, and must not be refused because one is unavailable.
+  const { usage } = await usageAndAccessFor(input.userId);
   const allowance = checkAllowance({
-    summary: summariseUsage(used, entitlements),
+    summary: usage,
     safetyRoute: gate.route,
   });
 

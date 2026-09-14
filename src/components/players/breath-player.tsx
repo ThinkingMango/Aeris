@@ -122,7 +122,7 @@ export function BreathPlayer({ intervention, onDone }: PlayerProps) {
 
       <div className="row">
         <button type="button" className="ghost" onClick={() => onDone({ completed: false })}>
-          That's enough
+          That’s enough
         </button>
       </div>
     </PlayerShell>

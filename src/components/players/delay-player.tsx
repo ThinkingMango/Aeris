@@ -178,7 +178,7 @@ export function DelayPlayer({ intervention, onDone, urgeId }: PlayerProps) {
         intervention={intervention}
         progress={1}
         onStop={() => onDone({ completed: false })}
-        footer={<span className="muted">However you answer, it's useful to know.</span>}
+        footer={<span className="muted">However you answer, it’s useful to know.</span>}
       >
         <p className="step-instruction">{content.closingQuestion}</p>
         <div className="row">

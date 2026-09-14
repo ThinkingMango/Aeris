@@ -1,13 +1,24 @@
 /**
  * Who is asking.
  *
- * Authentication is stage two. Until then a signed-out visitor gets a stable
- * anonymous id in a cookie, which is enough to have a real conversation and
- * come back to it, and is deliberately not enough to be mistaken for an
- * account.
+ * Aeris is opened by someone who is anxious right now. Putting a sign-up form
+ * in front of that is the wrong product, so there isn't one: pressing "Help me
+ * now" gets a real, durable identity with nothing typed.
  *
- * The resolution itself is a pure function so it can be tested without a
- * request; the cookie read and write live in the route handlers.
+ * That identity is a **Supabase anonymous user** rather than a cookie we
+ * invent, and the difference matters more than it looks.
+ *
+ *  - It is a real row in `auth.users`, so `auth.uid()` exists, so row-level
+ *    security is a working boundary rather than an aspiration.
+ *  - It survives being upgraded. Adding an email later with `updateUser`
+ *    converts the same account to a permanent one — **same id** — so months of
+ *    history follow the person to their account instead of being migrated,
+ *    reconciled, or lost.
+ *
+ * The cookie below is the development fallback for running with no Supabase
+ * project at all. It is enough to have a conversation and come back to it, and
+ * deliberately not enough to be mistaken for an account — which is why
+ * production refuses to use it.
  */
 export const IDENTITY_COOKIE = "aeris_uid";
 export const IDENTITY_MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
@@ -38,3 +49,35 @@ export const IDENTITY_COOKIE_OPTIONS = {
   path: "/",
   maxAge: IDENTITY_MAX_AGE_SECONDS,
 } as const;
+
+export type IdentityMode = "supabase" | "dev_cookie";
+
+/**
+ * Which mechanism is in play, decided from configuration alone.
+ *
+ * Pure so the rule can be tested without an environment: production without
+ * Supabase is not a degraded mode to be papered over, it is a deployment that
+ * has no authentication and therefore no RLS, and it must not start.
+ */
+export function identityMode(input: {
+  readonly supabaseConfigured: boolean;
+  readonly appEnv: string | undefined;
+}): IdentityMode {
+  if (input.supabaseConfigured) return "supabase";
+  if (input.appEnv === "production") {
+    throw new IdentityError(
+      "Supabase is not configured. A production deployment cannot fall back to " +
+        "the development cookie: it would run with no authentication and no " +
+        "row-level security.",
+    );
+  }
+  return "dev_cookie";
+}
+
+/** Distinguishable from an ordinary failure so a route can answer 503. */
+export class IdentityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IdentityError";
+  }
+}

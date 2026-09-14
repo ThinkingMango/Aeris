@@ -195,7 +195,7 @@ export function SessionView({
 
       {phase === "done" ? (
         <aside className="finished">
-          <p>That's this one done. You can start another whenever you need to.</p>
+          <p>That’s this one done. You can start another whenever you need to.</p>
         </aside>
       ) : null}
 

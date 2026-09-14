@@ -5,6 +5,16 @@ import { encodeEvent, NDJSON_CONTENT_TYPE, type StreamEvent } from "@/lib/stream
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/**
+ * A generated reply plus its structured decision takes longer than Vercel's
+ * default. 60 seconds is the ceiling on the Hobby plan and comfortably above
+ * what a turn needs; raise it on Pro only if the model is asked to do more.
+ *
+ * The runtime is Node rather than Edge on purpose: the Postgres driver and the
+ * Anthropic SDK both need APIs the Edge runtime does not have, and streaming
+ * works identically on Node.
+ */
+export const maxDuration = 60;
 
 /**
  * One turn, streamed.
@@ -18,7 +28,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const identity = identityFor(request);
+  const identity = await identityFor(request);
   const { id } = await context.params;
   const body = await readJson(request);
 

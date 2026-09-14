@@ -20,10 +20,13 @@ import type {
   PatternRow,
   PreferencesRow,
   ProfileRow,
+  RecordBillingEventInput,
   RecordRunInput,
   Repository,
   SessionPatch,
   SessionRow,
+  SubscriptionRow,
+  UpsertSubscriptionInput,
   UrgeRow,
 } from "./types";
 
@@ -36,6 +39,9 @@ interface Store {
   usage: Map<string, number>;
   profiles: Map<string, ProfileRow>;
   preferences: Map<string, PreferencesRow>;
+  subscriptions: Map<string, SubscriptionRow>;
+  /** Event id to status. Presence is the replay guard. */
+  billingEvents: Map<string, string>;
 }
 
 const KEY = Symbol.for("aeris.memory.store");
@@ -53,6 +59,8 @@ function store(): Store {
     usage: new Map(),
     profiles: new Map(),
     preferences: new Map(),
+    subscriptions: new Map(),
+    billingEvents: new Map(),
   };
   holder[KEY] = fresh;
   return fresh;
@@ -175,7 +183,13 @@ export function createMemoryRepository(): Repository {
     async listRuns(userId: string): Promise<readonly RunRecord[]> {
       return store()
         .runs.filter((row) => row.userId === userId)
-        .map(({ userId: _ignored, ...run }) => run);
+        .map((row) => ({
+          intervention: row.intervention,
+          completed: row.completed,
+          intensityBefore: row.intensityBefore,
+          intensityAfter: row.intensityAfter,
+          helpfulness: row.helpfulness,
+        }));
     },
 
     async createUrge(input: CreateUrgeInput): Promise<UrgeRow> {
@@ -263,6 +277,58 @@ export function createMemoryRepository(): Repository {
       const current = store();
       current.usage.set(key, (current.usage.get(key) ?? 0) + 1);
     },
+
+    /* ---------------- billing ---------------- */
+
+    async getSubscription(userId: string): Promise<SubscriptionRow | null> {
+      return store().subscriptions.get(userId) ?? null;
+    },
+
+    async upsertSubscription(input: UpsertSubscriptionInput): Promise<void> {
+      const current = store();
+      const existing = current.subscriptions.get(input.userId);
+      // Mirrors the Postgres `setWhere`: an event older than the stored row
+      // changes nothing, so an out-of-order delivery cannot revive a plan.
+      if (
+        existing !== undefined &&
+        existing.lastEventAt !== null &&
+        existing.lastEventAt.getTime() > input.lastEventAt.getTime()
+      ) {
+        return;
+      }
+      current.subscriptions.set(input.userId, { ...input });
+    },
+
+    async findUserIdByCustomer(provider: string, customerId: string): Promise<string | null> {
+      for (const row of store().subscriptions.values()) {
+        if (row.provider === provider && row.providerCustomerId === customerId) return row.userId;
+      }
+      return null;
+    },
+
+    async recordBillingEvent(input: RecordBillingEventInput): Promise<boolean> {
+      const current = store();
+      const key = `${input.provider}:${input.eventId}`;
+      // Mirrors the Postgres `setWhere`: a previously failed event may be
+      // claimed again, so a retry is not swallowed as a replay.
+      const existing = current.billingEvents.get(key);
+      if (existing !== undefined && existing !== "failed") return false;
+      current.billingEvents.set(key, "received");
+      return true;
+    },
+
+    async markBillingEvent(
+      provider: string,
+      eventId: string,
+      status: "processed" | "ignored" | "failed",
+    ): Promise<void> {
+      const current = store();
+      const key = `${provider}:${eventId}`;
+      if (current.billingEvents.has(key)) current.billingEvents.set(key, status);
+    },
+
+    /** Nothing to guarantee: there are no foreign keys in a Map. */
+    async ensureProfile(): Promise<void> {},
   };
 }
 

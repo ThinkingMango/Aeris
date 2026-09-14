@@ -4,12 +4,18 @@
  * Identity resolution and the cookie that carries it, plus the small set of
  * response shapes every route uses. Route handlers should be boring.
  */
+import { cookies } from "next/headers";
+
 import {
   IDENTITY_COOKIE,
   IDENTITY_MAX_AGE_SECONDS,
+  IdentityError,
+  identityMode,
   resolveIdentity,
   type Identity,
 } from "./identity";
+import { isSupabaseConfigured } from "./supabase/config";
+import { currentUserId, supabaseReadOnlyClient, supabaseRouteClient } from "./supabase/server";
 
 export interface RequestIdentity extends Identity {
   /** Headers to merge into the response, setting the cookie when it is new. */
@@ -26,7 +32,69 @@ function readCookie(request: Request, name: string): string | undefined {
   return undefined;
 }
 
-export function identityFor(request: Request): RequestIdentity {
+/**
+ * Resolves the caller, creating an anonymous account if there isn't one.
+ *
+ * Signing in happens here, in the route layer, rather than in middleware,
+ * because middleware runs on requests from crawlers and prefetches too and
+ * would mint an account for each of them. A request that reaches a route has
+ * asked for something that needs an identity.
+ *
+ * This requires anonymous sign-ins to be enabled on the Supabase project. If
+ * they are not, it fails loudly rather than silently handing out an
+ * unauthenticated id that RLS would reject on the next query.
+ */
+export async function identityFor(request: Request): Promise<RequestIdentity> {
+  const mode = identityMode({
+    supabaseConfigured: isSupabaseConfigured(),
+    appEnv: process.env["APP_ENV"],
+  });
+
+  if (mode === "supabase") {
+    const supabase = await supabaseRouteClient();
+
+    const existing = await currentUserId(supabase);
+    if (existing !== null) return { userId: existing, isNew: false, headers: {} };
+
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error !== null || data.user === null) {
+      throw new IdentityError(
+        "Could not create an anonymous session. Check that anonymous sign-ins are " +
+          "enabled: Supabase → Authentication → Sign In / Providers → Anonymous.",
+      );
+    }
+    // The Supabase client wrote its own cookies through the store, so there is
+    // nothing to merge into the response here.
+    return { userId: data.user.id, isNew: true, headers: {} };
+  }
+
+  return devCookieIdentity(request);
+}
+
+/**
+ * The signed-in viewer, for server components.
+ *
+ * Read-only: a component cannot start a session, so a visitor with no identity
+ * gets null and the page decides what that means. It must never be the path
+ * that creates an account, because a prefetched page would then create one.
+ */
+export async function viewerId(): Promise<string | null> {
+  const mode = identityMode({
+    supabaseConfigured: isSupabaseConfigured(),
+    appEnv: process.env["APP_ENV"],
+  });
+
+  if (mode === "supabase") {
+    return currentUserId(await supabaseReadOnlyClient());
+  }
+
+  const store = await cookies();
+  const identity = resolveIdentity(store.get(IDENTITY_COOKIE)?.value);
+  return identity.isNew ? null : identity.userId;
+}
+
+/** Development only. `identityMode` refuses to return this in production. */
+function devCookieIdentity(request: Request): RequestIdentity {
   const identity = resolveIdentity(readCookie(request, IDENTITY_COOKIE));
   if (!identity.isNew) return { ...identity, headers: {} };
 

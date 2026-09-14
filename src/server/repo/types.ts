@@ -12,6 +12,7 @@
  * quietly.
  */
 import type { State } from "@/core/conversation/states";
+import type { BillingStatus, Plan } from "@/core/entitlements";
 import type { InterventionSlug } from "@/core/interventions/catalog";
 import type { RunRecord } from "@/core/interventions/ranking";
 import type { Pattern, Tone, Trigger } from "@/core/patterns/taxonomy";
@@ -123,6 +124,48 @@ export interface CreateUrgeInput {
   readonly delayMinutes: number | null;
 }
 
+export interface SubscriptionRow {
+  readonly userId: string;
+  readonly plan: Plan;
+  readonly status: BillingStatus;
+  /** "sandbox" or "production". A row written by one is never read as the other. */
+  readonly environment: string;
+  readonly provider: string | null;
+  readonly providerCustomerId: string | null;
+  readonly providerSubscriptionId: string | null;
+  readonly providerPriceId: string | null;
+  readonly currentPeriodEnd: Date | null;
+  readonly cancelAtPeriodEnd: boolean;
+  readonly lastEventAt: Date | null;
+}
+
+export interface UpsertSubscriptionInput {
+  readonly userId: string;
+  readonly plan: Plan;
+  readonly status: BillingStatus;
+  readonly environment: string;
+  readonly provider: string;
+  readonly providerCustomerId: string | null;
+  readonly providerSubscriptionId: string | null;
+  readonly providerPriceId: string | null;
+  readonly currentPeriodEnd: Date | null;
+  readonly cancelAtPeriodEnd: boolean;
+  /**
+   * When the provider says this state was true. Webhooks arrive out of order,
+   * so a write carrying an older timestamp than the stored row is discarded
+   * rather than applied — otherwise a late `created` can undo a `canceled`.
+   */
+  readonly lastEventAt: Date;
+}
+
+export interface RecordBillingEventInput {
+  readonly provider: string;
+  readonly eventId: string;
+  readonly eventType: string;
+  readonly environment: string;
+  readonly occurredAt: Date | null;
+}
+
 export interface SessionPatch {
   readonly state?: State;
   readonly status?: SessionStatus;
@@ -168,4 +211,32 @@ export interface Repository {
   /* Allowance */
   countGuidedSessions(userId: string, periodStart: string): Promise<number>;
   incrementGuidedSessions(userId: string, periodStart: string): Promise<void>;
+
+  /* Billing */
+  getSubscription(userId: string): Promise<SubscriptionRow | null>;
+  upsertSubscription(input: UpsertSubscriptionInput): Promise<void>;
+  /** The webhook knows a customer, not an account. This is how it finds one. */
+  findUserIdByCustomer(provider: string, customerId: string): Promise<string | null>;
+  /**
+   * Records that an event was seen. Returns false when it was already
+   * recorded, which is the replay guard: the provider retries on any non-2xx
+   * and may deliver the same event more than once.
+   */
+  recordBillingEvent(input: RecordBillingEventInput): Promise<boolean>;
+  markBillingEvent(
+    provider: string,
+    eventId: string,
+    status: "processed" | "ignored" | "failed",
+    errorCode: string | null,
+  ): Promise<void>;
+
+  /**
+   * Makes sure a profile row exists for an authenticated user.
+   *
+   * A database trigger on `auth.users` is the primary mechanism; this is the
+   * guard for an account that predates the trigger or a signup that raced it.
+   * Every other table has a foreign key to `profiles`, so a missing row turns
+   * an ordinary first session into a constraint violation.
+   */
+  ensureProfile(userId: string): Promise<void>;
 }

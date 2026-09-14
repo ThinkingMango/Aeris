@@ -15,7 +15,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const identity = identityFor(request);
+  const identity = await identityFor(request);
   const { id } = await context.params;
 
   const urge = await repository().getUrge(id, identity.userId);

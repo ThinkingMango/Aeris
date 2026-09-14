@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { IDENTITY_COOKIE, resolveIdentity } from "@/server/identity";
+import { viewerId } from "@/server/http";
 import { repository } from "@/server/repo";
 import { SessionView } from "@/components/session/session-view";
 import type { DisplayMessage } from "@/components/session/message-list";
@@ -16,17 +15,17 @@ export const dynamic = "force-dynamic";
  */
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const store = await cookies();
-  const identity = resolveIdentity(store.get(IDENTITY_COOKIE)?.value);
+  const userId = await viewerId();
 
-  // A brand new visitor has no cookie and therefore owns no session. There is
-  // nothing here for them, and saying so is the same answer a stranger gets.
-  if (identity.isNew) notFound();
+  // A brand new visitor is signed in to nothing and therefore owns no session.
+  // There is nothing here for them, and saying so is the same answer a
+  // stranger gets — the two are deliberately indistinguishable.
+  if (userId === null) notFound();
 
-  const session = await repository().getSession(id, identity.userId);
+  const session = await repository().getSession(id, userId);
   if (session === null) notFound();
 
-  const stored = await repository().listMessages(id, identity.userId);
+  const stored = await repository().listMessages(id, userId);
   const messages: DisplayMessage[] = stored.map((row) => ({
     id: row.id,
     role: row.role,

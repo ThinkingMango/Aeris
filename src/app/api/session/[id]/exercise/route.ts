@@ -17,7 +17,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const identity = identityFor(request);
+  const identity = await identityFor(request);
   const { id } = await context.params;
   const body = await readJson(request);
 
