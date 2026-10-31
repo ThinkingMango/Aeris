@@ -103,7 +103,11 @@ def cost_usd(model, usage):
 
 
 def check(case, data):
-    problems = validate_generated({k: data.get(k) for k in ("reflection", "proposal", "worry_items")})
+    problems = validate_generated({k: data.get(k) for k in ("reflection", "proposal", "worry_items", "suggestions")})
+    if len(data.get("suggestions") or []) != 3:
+        problems.append(f"expected 3 suggestions, got {len(data.get('suggestions') or [])}")
+    if len(set(data.get("plan") or [])) != len(data.get("plan") or []):
+        problems.append("plan repeats an exercise")
     plan = data.get("plan") or []
     escalated = bool(data.get("escalate"))
     allowed = RESTRICTED_EXERCISES if escalated else NORMAL_EXERCISES

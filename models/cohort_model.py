@@ -10,6 +10,7 @@ cost with a heavy-user tail. Standard library only.
   python3 models/cohort_model.py --markdown   # same, as markdown
 """
 import argparse
+import functools
 import json
 import math
 import pathlib
@@ -22,6 +23,7 @@ def net_of_fees(price):
     return price * (1 - pct) - A["card_fee_fixed_usd"]
 
 
+@functools.lru_cache(maxsize=None)
 def paid_sessions_mean():
     """Mean of a lognormal (median, p90) capped at the fair-use limit, by numerical integration."""
     med, p90, cap = A["paid_sessions_median"], A["paid_sessions_p90"], A["paid_fair_use_cap_per_month"]
@@ -61,8 +63,8 @@ def free_active_share(age):
     return s[-1] * A["free_active_monthly_decay_after"] ** (age - len(s) + 1)
 
 
-def simulate(sc):
-    months = A["months"]
+def simulate(sc, months=None, cac=0.0):
+    months = months or A["months"]
     fixed = sum(A["fixed_costs_monthly_usd"].values())
     founder = A["founder_hours_per_month"] * A["founder_hourly_value_usd"]
     paid_mean = paid_sessions_mean()
@@ -76,6 +78,7 @@ def simulate(sc):
             new_paid_by_month[m + lag] += activated * sc["paid_conversion_of_activated"] * share
 
     prev_monthly = 0.0
+    free_cum = 0.0
     for m in range(months):
         new_paid = new_paid_by_month[m]
         new_monthly = new_paid * (1 - A["plan_mix_annual"])
@@ -93,67 +96,115 @@ def simulate(sc):
         revenue = (monthly_now * net_of_fees(A["price_monthly_usd"])
                    + (new_annual + renewing) * net_of_fees(A["price_annual_usd"]))
         refunds = A["refund_rate_first_payment"] * (new_monthly * A["price_monthly_usd"] + new_annual * A["price_annual_usd"])
-        free_active = sum(sc["signups_per_month"] * sc["activation"] * free_active_share(m - s) for s in range(m + 1))
+        free_cum += sc["signups_per_month"] * sc["activation"] * free_active_share(m)
+        free_active = free_cum
         paying = monthly_now + annual_active
         ai_cost = A["ai_cost_per_session_usd"] * (
             free_active * min(A["free_sessions_cap_per_month"], A["free_sessions_mean_when_active"])
             + paying * A["paid_active_share"] * paid_mean)
-        operating = revenue - refunds - ai_cost - fixed
+        acquisition = sc["signups_per_month"] * cac
+        operating = revenue - refunds - ai_cost - fixed - acquisition
         cash += operating
         rows.append(dict(month=m + 1, paying=paying, free_active=free_active, revenue=revenue - refunds,
-                         ai=ai_cost, fixed=fixed, operating=operating, after_founder=operating - founder, cash=cash))
+                         ai=ai_cost, fixed=fixed, acquisition=acquisition, operating=operating, after_founder=operating - founder, cash=cash))
         prev_monthly = monthly_now
     return rows
 
 
-def break_even():
-    fixed = sum(A["fixed_costs_monthly_usd"].values())
-    founder = A["founder_hours_per_month"] * A["founder_hourly_value_usd"]
-    per_sub = (A["plan_mix_annual"] * net_of_fees(A["price_annual_usd"]) / 12
-               + (1 - A["plan_mix_annual"]) * net_of_fees(A["price_monthly_usd"])
-               - A["paid_active_share"] * paid_sessions_mean() * A["ai_cost_per_session_usd"])
-    return per_sub, math.ceil(fixed / per_sub), math.ceil((fixed + founder) / per_sub)
+def lifetime_months():
+    return ((1 - A["plan_mix_annual"]) / A["monthly_plan_churn"]
+            + A["plan_mix_annual"] * 12 / (1 - A["annual_renewal_rate"]))
+
+
+def steady_state_contribution():
+    """Contribution per paying subscriber per month using the STEADY-STATE plan mix
+    (annual subscribers stay longer, so they are a larger share of the base than of new sales)."""
+    monthly_life = (1 - A["plan_mix_annual"]) / A["monthly_plan_churn"]
+    annual_life = A["plan_mix_annual"] * 12 / (1 - A["annual_renewal_rate"])
+    annual_share = annual_life / (monthly_life + annual_life)
+    rev = annual_share * net_of_fees(A["price_annual_usd"]) / 12 + (1 - annual_share) * net_of_fees(A["price_monthly_usd"])
+    return rev - A["paid_active_share"] * paid_sessions_mean() * A["ai_cost_per_session_usd"], annual_share
+
+
+def steady_operating(signups, sc, cac=0.0, founder=False, months=240):
+    s = dict(sc, signups_per_month=signups)
+    op = simulate(s, months=months, cac=cac)[-1]["operating"]
+    return op - (A["founder_hours_per_month"] * A["founder_hourly_value_usd"] if founder else 0)
+
+
+def break_even_signups(sc, cac=0.0, founder=False):
+    """Smallest signups/month whose steady-state monthly operating result is >= 0 (from the simulation itself)."""
+    lo, hi = 0.0, 1.0
+    while steady_operating(hi, sc, cac, founder) < 0:
+        hi *= 2
+        if hi > 1e7:
+            return None  # never breaks even: each signup loses money
+    for _ in range(50):
+        mid = (lo + hi) / 2
+        if steady_operating(mid, sc, cac, founder) >= 0:
+            hi = mid
+        else:
+            lo = mid
+    return math.ceil(hi)
+
+
+def lifetime_value_per_signup(sc):
+    contrib, _ = steady_state_contribution()
+    refund_loss = A["refund_rate_first_payment"] * (A["plan_mix_annual"] * A["price_annual_usd"] + (1 - A["plan_mix_annual"]) * A["price_monthly_usd"])
+    per_paying = contrib * lifetime_months() - refund_loss
+    return per_paying, per_paying * sc["activation"] * sc["paid_conversion_of_activated"]
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--markdown", action="store_true")
     ap.parse_args()
-    per_sub, be_ops, be_founder = break_even()
+    contrib, annual_share = steady_state_contribution()
+    fixed = sum(A["fixed_costs_monthly_usd"].values())
+    founder = A["founder_hours_per_month"] * A["founder_hourly_value_usd"]
     annual_monthly_net = net_of_fees(A["price_annual_usd"]) / 12
     print("## Unit economics per paying subscriber per month\n")
     print("| Item | Value |\n|---|---:|")
     print(f"| Monthly plan, net of fees | ${net_of_fees(A['price_monthly_usd']):.2f} |")
     print(f"| Annual plan, net of fees, per month | ${annual_monthly_net:.2f} |")
+    print(f"| Annual share of NEW subscribers / of the steady-state BASE | {A['plan_mix_annual']:.0%} / {annual_share:.0%} |")
     print(f"| Mean AI sessions per paying user per month (capped lognormal) | {paid_sessions_mean():.1f} |")
-    print(f"| Blended contribution after AI cost | ${per_sub:.2f} |")
-    print(f"| Fixed costs per month | ${sum(A['fixed_costs_monthly_usd'].values()):.0f} |")
-    print(f"| Subscribers to cover fixed costs | **{be_ops}** |")
-    print(f"| Subscribers to also pay founder time ({A['founder_hours_per_month']} h at ${A['founder_hourly_value_usd']}/h) | **{be_founder}** |")
+    print(f"| Contribution per subscriber at steady state, after fees and AI | ${contrib:.2f} |")
+    print(f"| Average paid lifetime, months | {lifetime_months():.1f} |")
+    print(f"| Fixed costs per month | ${fixed:.0f} |")
+    print(f"| Founder time, if paid ({A['founder_hours_per_month']} h at ${A['founder_hourly_value_usd']}/h) | ${founder:.0f} |")
 
-    life = ((1 - A["plan_mix_annual"]) / A["monthly_plan_churn"]
-            + A["plan_mix_annual"] * 12 / (1 - A["annual_renewal_rate"]))
-    print(f"| Average paid lifetime, months (blended monthly churn and annual renewal) | {life:.1f} |")
-    print("\n## Signups needed per month to break even at steady state\n")
-    print("Steady-state paying subscribers = new paying per month x average paid lifetime. "
-          "Reaching steady state takes roughly one lifetime.\n")
-    print("| Activation x conversion | Signups/month to cover fixed costs | ...and founder time |\n|---|---:|---:|")
+    print("\n## Lifetime value and the most you can pay for a signup\n")
+    print("| Scenario | Lifetime contribution per paying subscriber | Per signup (x activation x conversion) |\n|---|---:|---:|")
     for name, sc in A["scenarios"].items():
-        rate = sc["activation"] * sc["paid_conversion_of_activated"]
-        print(f"| {name}: {sc['activation']:.0%} x {sc['paid_conversion_of_activated']:.1%} = {rate:.2%} | "
-              f"{math.ceil(be_ops / life / rate):,} | {math.ceil(be_founder / life / rate):,} |")
+        per_paying, per_signup = lifetime_value_per_signup(sc)
+        print(f"| {name} | ${per_paying:.2f} | **${per_signup:.2f}** |")
+    print("\nPaying more than the per-signup figure to acquire a user loses money on every signup, before fixed costs.")
+
+    print("\n## Signups needed per month to break even (from the simulation, steady state)\n")
+    print("Solved by running the cohort simulation for 240 months and finding the smallest signup rate with a non-negative "
+          "monthly result. Includes refunds, free-user AI cost and acquisition spend. Reaching steady state takes years.\n")
+    head = " | ".join(f"CAC ${c:g}" for c in A["cac_per_signup_usd_options"])
+    print(f"| Scenario | Covers | {head} |\n|---|---|" + "---:|" * len(A["cac_per_signup_usd_options"]))
+    for name, sc in A["scenarios"].items():
+        for label, f in (("fixed costs", False), ("+ founder time", True)):
+            cells = []
+            for c in A["cac_per_signup_usd_options"]:
+                v = break_even_signups(sc, cac=c, founder=f)
+                cells.append("never" if v is None else f"{v:,}")
+            print(f"| {name} | {label} | " + " | ".join(cells) + " |")
+
     print("\n## Heavy-user tail (does the top user lose money?)\n")
     print("| User percentile | Sessions/month | AI cost/month | Annual-plan net/month | Margin |\n|---|---:|---:|---:|---:|")
     for q in (0.5, 0.9, 0.99, 0.999):
         s = quantile_sessions(q)
         c = s * A["ai_cost_per_session_usd"]
         print(f"| p{q * 100:g} | {s:.0f} | ${c:.2f} | ${annual_monthly_net:.2f} | ${annual_monthly_net - c:.2f} |")
-    cap_cost = A["paid_fair_use_cap_per_month"] * 0.042
-    print(f"\nAt the fair-use cap of {A['paid_fair_use_cap_per_month']} sessions with cold caches (${0.042}/session) "
-          f"a user costs ${cap_cost:.2f}/month against ${annual_monthly_net:.2f} net. "
-          f"The v1 per-user cap of $0.60/day allowed $18/month.")
+    cap_cost = A["paid_fair_use_cap_per_month"] * A["ai_cost_per_session_usd"]
+    print(f"\nAt the fair-use cap of {A['paid_fair_use_cap_per_month']} sessions a user costs ${cap_cost:.2f}/month in AI "
+          f"against ${annual_monthly_net:.2f} net on the annual plan. The v1 per-user cap of $0.60/day allowed $18/month.")
 
-    print("\n## Scenarios (commercial phase, months after paid launch)\n")
+    print("\n## Scenarios at zero acquisition cost (commercial phase, months after paid launch)\n")
     print("| Scenario | Signups/mo | Activation | Paid conv. | Paying at m12 | Paying at m24 | Op. profit m24/mo | Cumulative cash m24 | After founder time m24/mo |")
     print("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     for name, sc in A["scenarios"].items():

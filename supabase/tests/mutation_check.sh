@@ -17,7 +17,7 @@ PY
   if bash "$HERE/run_local.sh" >/tmp/mut.log 2>&1; then echo "NOT CAUGHT  $name"; else echo "caught      $name  ($(grep -c '^FAIL' /tmp/mut.log) failing checks)"; fi
 }
 mutate "table-wide UPDATE on sessions (v1 plan self-upgrade hole)" \
-  "grant update (tension_after, completed) on public.sessions to authenticated;" \
+  "grant update (completed) on public.sessions to authenticated;" \
   "grant update on public.sessions to authenticated;"
 mutate "child rows not tied to parent owner (v1 cross-owner hole)" \
   "  foreign key (session_id, user_id) references public.sessions(id, user_id) on delete cascade
@@ -34,6 +34,12 @@ mutate "privileged functions executable by everyone (v1 RPC hole)" \
 mutate "consents editable by users (v1 audit-record hole)" \
   "grant insert (consent_type, version, granted) on public.consents to authenticated;" \
   "grant insert, update, delete on public.consents to authenticated; create policy consents_any on public.consents for all to authenticated using (user_id = auth.uid());"
+mutate "sessions without a consent check (red-team A5)" \
+  "  if not app_private.has_required_consents(new.user_id) then raise exception 'required consent missing or withdrawn'; end if;" \
+  ""
+mutate "unreviewed exercises loggable (red-team A4)" \
+  "  if not exists (select 1 from public.exercises e where e.id = new.exercise_id and e.is_active) then" \
+  "  if false then"
 mutate "quota check without row lock (v1 race)" \
-  "select * into v_budget from app_private.daily_budget where day = v_day for update;" \
-  "select * into v_budget from app_private.daily_budget where day = v_day; perform pg_sleep(0.05);"
+  "select * into v_b from app_private.daily_budget where day = v_day and kind = p_kind for update;" \
+  "select * into v_b from app_private.daily_budget where day = v_day and kind = p_kind; perform pg_sleep(0.05);"

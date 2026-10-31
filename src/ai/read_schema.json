@@ -26,6 +26,12 @@
     },
     "escalate": {
       "type": "boolean"
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
@@ -33,6 +39,7 @@
     "proposal",
     "plan",
     "worry_items",
+    "suggestions",
     "escalate"
   ],
   "additionalProperties": false

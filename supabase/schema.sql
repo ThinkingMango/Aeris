@@ -24,8 +24,15 @@
 --     update or delete.
 --   * AI quota and spend are reserved atomically before any model call.
 --
--- Tested by supabase/tests/security_test.sql and
--- supabase/tests/concurrency_test.sh (run: supabase/tests/run_local.sh).
+-- Revised 2026-10-31 after red-team review: enrolment by invite only;
+-- sessions require recorded consent and a country; inactive (unreviewed)
+-- exercises cannot be logged; reviewer sign-off must be real; AI budget
+-- is enforced at reservation and settles may exceed estimates; classifier
+-- and generator calls have separate limits; Illinois participants are
+-- held on the scripted arm; a global kill switch exists.
+--
+-- Tested by supabase/tests/run_security_tests.py (run: npm run test:db),
+-- with a mutation check (npm run test:db:mutations).
 -- =====================================================================
 
 -- gen_random_uuid() is built into PostgreSQL 13+, so no extension is installed.
@@ -55,42 +62,58 @@ create type public.app_arm as enum ('scripted', 'ai');
 
 -- Crossover assignment: each participant uses one arm for period_days,
 -- then the other. Written only by the signup trigger.
+-- Invite list: only these email addresses are enrolled at signup.
+create table app_private.invites (
+  email      text primary key check (email = lower(email) and position('@' in email) > 1),
+  invited_at timestamptz not null default now()
+);
+
 create table app_private.assignments (
-  user_id     uuid primary key references auth.users(id) on delete cascade,
-  first_arm   public.app_arm not null,
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  first_arm    public.app_arm not null,
+  arm_override public.app_arm,   -- set by the region rule (Illinois -> scripted)
   period_days smallint not null default 14 check (period_days between 1 and 60),
   enrolled_at timestamptz not null default now()
 );
 
 -- Operational settings, one row.
 create table app_private.settings (
-  id                     boolean primary key default true check (id),
-  per_user_daily_ai_calls int     not null default 12 check (per_user_daily_ai_calls between 0 and 100),
-  daily_budget_usd       numeric(10,4) not null default 5.00 check (daily_budget_usd >= 0),
-  max_single_call_usd    numeric(10,4) not null default 0.25 check (max_single_call_usd > 0)
+  id                             boolean primary key default true check (id),
+  per_user_daily_generate_calls  int not null default 12  check (per_user_daily_generate_calls between 0 and 1000),
+  per_user_daily_classify_calls  int not null default 300 check (per_user_daily_classify_calls between 0 and 10000),
+  daily_generate_budget_usd      numeric(12,6) not null default 5.00 check (daily_generate_budget_usd >= 0),
+  daily_classify_budget_usd      numeric(12,6) not null default 5.00 check (daily_classify_budget_usd >= 0),
+  max_single_call_usd            numeric(12,6) not null default 0.25 check (max_single_call_usd > 0),
+  -- Kill switch read by every server function: when true, the controller is
+  -- run with globalRestricted and no generated text is shown to anyone.
+  global_restricted              boolean not null default false
 );
 insert into app_private.settings default values;
 
--- Global daily AI budget ledger. reserved + spent may never exceed cap.
+-- Daily AI budget ledger, one row per day and call kind. The cap is enforced
+-- when reserving. Settling records the REAL cost even if it exceeds the cap,
+-- so the ledger never under-reports spend; new reservations are then refused.
 create table app_private.daily_budget (
-  day          date primary key,
-  cap_usd      numeric(10,4) not null,
-  reserved_usd numeric(10,4) not null default 0 check (reserved_usd >= 0),
-  spent_usd    numeric(10,4) not null default 0 check (spent_usd >= 0),
-  check (reserved_usd + spent_usd <= cap_usd + 0.0001)
+  day          date not null,
+  kind         text not null check (kind in ('classify', 'generate')),
+  cap_usd      numeric(12,6) not null,
+  reserved_usd numeric(12,6) not null default 0 check (reserved_usd >= 0),
+  spent_usd    numeric(12,6) not null default 0 check (spent_usd >= 0),
+  primary key (day, kind)
 );
 
 create table app_private.ai_reservations (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid references auth.users(id) on delete set null,
   day         date not null,
-  est_usd     numeric(10,4) not null check (est_usd > 0),
-  actual_usd  numeric(10,4) check (actual_usd >= 0),
+  kind        text not null check (kind in ('classify', 'generate')),
+  est_usd     numeric(12,6) not null check (est_usd > 0),
+  actual_usd  numeric(12,6) check (actual_usd >= 0),
   status      text not null default 'reserved' check (status in ('reserved', 'settled', 'released', 'expired')),
   created_at  timestamptz not null default now(),
   settled_at  timestamptz
 );
-create index on app_private.ai_reservations (user_id, day);
+create index on app_private.ai_reservations (user_id, day, kind);
 
 -- Safety events: no text, no hash of text. user_id is kept only so a
 -- reviewer can follow the duty-of-care protocol in docs/07; it becomes
@@ -128,7 +151,7 @@ create table public.exercises (
   reviewed_by  text,
   reviewed_at  date,
   is_active    boolean not null default false,
-  check (not is_active or (reviewed_by is not null and reviewed_at is not null))
+  check (not is_active or (char_length(btrim(coalesce(reviewed_by, ''))) >= 3 and reviewed_at >= date '2026-01-01'))
 );
 insert into public.exercises (id, name, duration_sec) values
   ('long_exhale_breathing', 'Long-exhale breathing', 120),
@@ -137,7 +160,8 @@ insert into public.exercises (id, name, duration_sec) values
 
 create table public.profiles (
   user_id      uuid primary key references auth.users(id) on delete cascade,
-  country_code char(2) not null default 'US' check (country_code ~ '^[A-Z]{2}$'),
+  country_code char(2) check (country_code ~ '^[A-Z]{2}$'),            -- required before a session; no default, so crisis lines are never guessed
+  region       text check (region ~ '^[A-Z]{2}-[A-Z0-9]{1,3}$'),       -- ISO 3166-2, e.g. US-IL; drives the Illinois rule
   timezone     text not null default 'UTC' check (char_length(timezone) <= 64),
   created_at   timestamptz not null default now()
 );
@@ -157,8 +181,7 @@ create table public.sessions (
   user_id        uuid not null default auth.uid() references auth.users(id) on delete cascade,
   arm            public.app_arm not null,
   situation      public.app_situation not null,
-  tension_before smallint check (tension_before between 0 and 10),
-  tension_after  smallint check (tension_after between 0 and 10),
+  tension_before smallint check (tension_before between 0 and 10),   -- optional; there is no after-score (docs/06 section 3)
   completed      boolean not null default false,
   started_at     timestamptz not null default now(),
   completed_at   timestamptz,
@@ -181,8 +204,9 @@ create table public.exercise_runs (
 create table public.feedback (
   session_id      uuid primary key,
   user_id         uuid not null default auth.uid(),
-  helpful         smallint not null check (helpful between 1 and 5),
+  helpful         smallint check (helpful between 1 and 5),
   would_use_again boolean,
+  check (helpful is not null or would_use_again is not null),
   created_at      timestamptz not null default now(),
   foreign key (session_id, user_id) references public.sessions(id, user_id) on delete cascade
 );
@@ -196,14 +220,14 @@ revoke all on public.exercises, public.profiles, public.consents, public.session
 grant select on public.exercises to anon, authenticated;
 
 grant select on public.profiles to authenticated;
-grant update (country_code, timezone) on public.profiles to authenticated;
+grant update (country_code, region, timezone) on public.profiles to authenticated;
 
 grant select on public.consents to authenticated;
 grant insert (consent_type, version, granted) on public.consents to authenticated;
 
 grant select on public.sessions to authenticated;
 grant insert (situation, tension_before) on public.sessions to authenticated;
-grant update (tension_after, completed) on public.sessions to authenticated;
+grant update (completed) on public.sessions to authenticated;
 
 grant select on public.exercise_runs to authenticated;
 grant insert (session_id, exercise_id, position) on public.exercise_runs to authenticated;
@@ -252,6 +276,7 @@ create function app_private.current_arm(p_user uuid) returns public.app_arm
 language sql stable security definer set search_path = '' as $$
   select case
     when a.user_id is null then null
+    when a.arm_override is not null then a.arm_override
     when now() < a.enrolled_at + make_interval(days => a.period_days) then a.first_arm
     when a.first_arm = 'scripted' then 'ai'::public.app_arm
     else 'scripted'::public.app_arm
@@ -259,15 +284,41 @@ language sql stable security definer set search_path = '' as $$
   from app_private.assignments a where a.user_id = p_user;
 $$;
 
--- Signup: create the profile and a random crossover order.
+-- Signup: always create a profile; enrol (assign an arm) ONLY if invited.
+-- Uninvited accounts can exist but cannot start sessions (my_arm is null).
 create function app_private.handle_new_user() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.profiles (user_id) values (new.id);
-  insert into app_private.assignments (user_id, first_arm)
-    values (new.id, case when random() < 0.5 then 'scripted'::public.app_arm else 'ai'::public.app_arm end);
+  if exists (select 1 from app_private.invites i where i.email = lower(new.email)) then
+    insert into app_private.assignments (user_id, first_arm)
+      values (new.id, case when random() < 0.5 then 'scripted'::public.app_arm else 'ai'::public.app_arm end);
+  end if;
   return new;
 end; $$;
+
+-- Region rule: participants in Illinois stay on the scripted arm (docs/10 section 3).
+create function app_private.profiles_region_rule() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  update app_private.assignments
+     set arm_override = case when new.region = 'US-IL' then 'scripted'::public.app_arm else null end
+   where user_id = new.user_id;
+  return new;
+end; $$;
+create trigger profiles_region_rule after insert or update of region on public.profiles
+  for each row execute function app_private.profiles_region_rule();
+
+-- True only if the user's LATEST answer to each required consent is 'granted'.
+create function app_private.has_required_consents(p_user uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select count(*) = 4 from (
+    select distinct on (c.consent_type) c.consent_type, c.granted
+    from public.consents c
+    where c.user_id = p_user and c.consent_type in ('terms', 'privacy', 'pilot_participation', 'age_18_plus')
+    order by c.consent_type, c.recorded_at desc, c.id desc
+  ) latest where latest.granted;
+$$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function app_private.handle_new_user();
 
@@ -277,6 +328,10 @@ language plpgsql security definer set search_path = '' as $$
 begin
   new.arm := app_private.current_arm(new.user_id);
   if new.arm is null then raise exception 'user is not enrolled in the pilot'; end if;
+  if not app_private.has_required_consents(new.user_id) then raise exception 'required consent missing or withdrawn'; end if;
+  if (select p.country_code from public.profiles p where p.user_id = new.user_id) is null then
+    raise exception 'country required before a session (it sets the crisis lines)';
+  end if;
   new.started_at := now();
   new.completed_at := null;
   new.safety_route := null;
@@ -296,45 +351,63 @@ end; $$;
 create trigger sessions_before_update before update on public.sessions
   for each row execute function app_private.sessions_before_update();
 
+-- Exercise runs: only reviewed, active exercises may be logged.
+create function app_private.runs_before_insert() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from public.exercises e where e.id = new.exercise_id and e.is_active) then
+    raise exception 'exercise % is not active (no reviewer sign-off)', new.exercise_id;
+  end if;
+  new.started_at := now();
+  return new;
+end; $$;
+create trigger runs_before_insert before insert on public.exercise_runs
+  for each row execute function app_private.runs_before_insert();
+
 -- The one function users may call: their own current arm. No parameters.
 create function public.my_arm() returns public.app_arm
 language sql stable security definer set search_path = '' as $$
   select app_private.current_arm(auth.uid());
 $$;
 
--- Reserve AI quota and budget BEFORE calling a model. Returns null when
--- the user's daily limit or the global daily budget would be exceeded.
--- The FOR UPDATE lock on the day's budget row serializes concurrent
--- reservations, so N parallel requests cannot all pass a stale check.
--- Do not hold this transaction open during the model call: reserve,
--- commit, call the model, then settle or release.
-create function app_private.reserve_ai_call(p_user uuid, p_est_usd numeric) returns uuid
+-- Reserve AI quota and budget BEFORE calling a model. Returns null when the
+-- user's daily limit or that kind's daily budget would be exceeded. The
+-- FOR UPDATE lock on the day's budget row serializes concurrent reservations.
+-- Do not hold this transaction open during the model call: reserve, commit,
+-- call the model, then settle (real cost) or release (model never called).
+-- Classifier calls have their own, larger limits so that a busy generator
+-- budget never stops safety screening.
+create function app_private.reserve_ai_call(p_user uuid, p_kind text, p_est_usd numeric) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
   v_day date := (now() at time zone 'utc')::date;
-  v_settings app_private.settings%rowtype;
-  v_budget app_private.daily_budget%rowtype;
+  v_s app_private.settings%rowtype;
+  v_b app_private.daily_budget%rowtype;
   v_used int;
+  v_limit int;
+  v_cap numeric;
   v_id uuid;
 begin
-  select * into v_settings from app_private.settings;
-  if p_user is null or p_est_usd is null or p_est_usd <= 0 or p_est_usd > v_settings.max_single_call_usd then
+  select * into v_s from app_private.settings;
+  if p_user is null or p_kind not in ('classify', 'generate') or p_est_usd is null
+     or p_est_usd <= 0 or p_est_usd > v_s.max_single_call_usd then
     raise exception 'invalid reservation request';
   end if;
-  insert into app_private.daily_budget (day, cap_usd) values (v_day, v_settings.daily_budget_usd)
-    on conflict (day) do nothing;
-  select * into v_budget from app_private.daily_budget where day = v_day for update;
+  v_cap   := case p_kind when 'classify' then v_s.daily_classify_budget_usd else v_s.daily_generate_budget_usd end;
+  v_limit := case p_kind when 'classify' then v_s.per_user_daily_classify_calls else v_s.per_user_daily_generate_calls end;
+  insert into app_private.daily_budget (day, kind, cap_usd) values (v_day, p_kind, v_cap) on conflict (day, kind) do nothing;
+  select * into v_b from app_private.daily_budget where day = v_day and kind = p_kind for update;
   select count(*) into v_used from app_private.ai_reservations
-    where user_id = p_user and day = v_day and status <> 'released';
-  if v_used >= v_settings.per_user_daily_ai_calls then return null; end if;
-  if v_budget.reserved_usd + v_budget.spent_usd + p_est_usd > v_budget.cap_usd then return null; end if;
-  update app_private.daily_budget set reserved_usd = reserved_usd + p_est_usd where day = v_day;
-  insert into app_private.ai_reservations (user_id, day, est_usd) values (p_user, v_day, p_est_usd)
+    where user_id = p_user and day = v_day and kind = p_kind and status <> 'released';
+  if v_used >= v_limit then return null; end if;
+  if v_b.reserved_usd + v_b.spent_usd + p_est_usd > v_b.cap_usd then return null; end if;
+  update app_private.daily_budget set reserved_usd = reserved_usd + p_est_usd where day = v_day and kind = p_kind;
+  insert into app_private.ai_reservations (user_id, day, kind, est_usd) values (p_user, v_day, p_kind, p_est_usd)
     returning id into v_id;
   return v_id;
 end; $$;
 
--- Settle with the real cost. Idempotent: a second call does nothing.
+-- Settle with the REAL cost, even if above the estimate or the cap. Idempotent.
 create function app_private.settle_ai_call(p_id uuid, p_actual_usd numeric) returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare v_r app_private.ai_reservations%rowtype;
@@ -342,23 +415,23 @@ begin
   if p_actual_usd is null or p_actual_usd < 0 then raise exception 'invalid cost'; end if;
   select * into v_r from app_private.ai_reservations where id = p_id for update;
   if not found or v_r.status <> 'reserved' then return false; end if;
-  perform 1 from app_private.daily_budget where day = v_r.day for update;
+  perform 1 from app_private.daily_budget where day = v_r.day and kind = v_r.kind for update;
   update app_private.daily_budget
      set reserved_usd = greatest(0, reserved_usd - v_r.est_usd), spent_usd = spent_usd + p_actual_usd
-   where day = v_r.day;
+   where day = v_r.day and kind = v_r.kind;
   update app_private.ai_reservations set status = 'settled', actual_usd = p_actual_usd, settled_at = now() where id = p_id;
   return true;
 end; $$;
 
--- Release when the model was never called. Idempotent.
+-- Release only when the model was NEVER called. Idempotent.
 create function app_private.release_ai_call(p_id uuid) returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare v_r app_private.ai_reservations%rowtype;
 begin
   select * into v_r from app_private.ai_reservations where id = p_id for update;
   if not found or v_r.status <> 'reserved' then return false; end if;
-  perform 1 from app_private.daily_budget where day = v_r.day for update;
-  update app_private.daily_budget set reserved_usd = greatest(0, reserved_usd - v_r.est_usd) where day = v_r.day;
+  perform 1 from app_private.daily_budget where day = v_r.day and kind = v_r.kind for update;
+  update app_private.daily_budget set reserved_usd = greatest(0, reserved_usd - v_r.est_usd) where day = v_r.day and kind = v_r.kind;
   update app_private.ai_reservations set status = 'released', settled_at = now() where id = p_id;
   return true;
 end; $$;

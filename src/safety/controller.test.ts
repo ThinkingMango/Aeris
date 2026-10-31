@@ -1,137 +1,190 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  startSession, ingest, decide, keywordScreen, confirmSafe, modelEscalated,
-  validateGenerated, validatePlan, fallbackPlan, TEXT_INGRESS_POINTS, type ScreenResult,
+  startSession, ingest, decide, keywordScreen, confirmSafe, modelEscalated, checkInAnswer,
+  validateGenerated, validatePlan, fallbackPlan, combineForScreening, ALL_EXERCISES, type ScreenResult,
 } from "./controller.ts";
 
-const cls = (...signals: any[]): ScreenResult => ({ kind: "ok", source: "classifier", signals });
+const cls = (...signals: string[]): ScreenResult => ({ kind: "ok", source: "classifier", signals });
 const fail: ScreenResult = { kind: "failure", source: "classifier", reason: "timeout" };
+const ACTIVE = { activeExercises: ALL_EXERCISES };
+const kw = (t: string) => (keywordScreen(t) as { signals: string[] }).signals;
+const screen = (t: string, ...extra: string[]) => [keywordScreen(t), cls(...extra)];
 
-test("ordinary worry stays normal and allows all three exercises", () => {
-  const s = ingest(startSession(), "moment_free_text", [keywordScreen("Big meeting tomorrow, can't stop rehearsing"), cls()]);
-  const d = decide(s, "ai");
+// ---------- core routing
+test("ordinary worry stays normal and allows the active exercises", () => {
+  const d = decide(ingest(startSession(), "moment_free_text", screen("Big meeting tomorrow")), "ai", ACTIVE);
   assert.equal(d.route, "normal");
-  assert.deepEqual(d.permittedExercises, ["long_exhale_breathing", "grounding_54321", "sort_and_step"]);
+  assert.deepEqual(d.permittedExercises, [...ALL_EXERCISES]);
   assert.equal(d.showGeneratedText, true);
 });
 
-test("figure of speech is not a crisis keyword", () => {
-  assert.deepEqual((keywordScreen("This presentation is going to kill me lol") as any).signals, []);
+test("no exercise is offered until the database reports it active (reviewer sign-off)", () => {
+  assert.deepEqual(decide(startSession(), "ai").permittedExercises, []);
 });
 
-test("curly apostrophes still match", () => {
-  assert.ok((keywordScreen("I don’t want to be alive anymore") as any).signals.includes("self_harm_ideation"));
+test("keyword-only result (no classifier, e.g. offline) fails closed to restricted", () => {
+  assert.equal(decide(ingest(startSession(), "moment_free_text", [keywordScreen("deadline friday")]), "ai", ACTIVE).route, "restricted");
 });
 
-test("v1 contradiction resolved: physical symptoms AND elevated gives one fixed order", () => {
-  const s = ingest(startSession(), "moment_free_text", [cls("physical_symptoms", "passive_death_wish")]);
-  const d = decide(s, "ai");
+test("classifier failure fails closed to restricted", () => {
+  assert.equal(ingest(startSession(), "moment_free_text", [keywordScreen("work is a lot"), fail]).route, "restricted");
+});
+
+test("unknown signal fails closed and cannot crash or escape (e.g. 'constructor')", () => {
+  const s = ingest(startSession(), "moment_free_text", [cls("constructor", "__proto__")]);
+  assert.equal(s.route, "restricted");
+});
+
+test("unknown ingress point is rejected", () => {
+  assert.throws(() => ingest(startSession(), "made_up" as any, [cls()]));
+});
+
+test("physical symptoms AND elevated give one fixed order: physical notice, then check-in", () => {
+  const d = decide(ingest(startSession(), "moment_free_text", [cls("physical_symptoms", "passive_death_wish")]), "ai", ACTIVE);
   assert.equal(d.route, "restricted");
   assert.deepEqual(d.notices.slice(0, 2), ["physical_notice", "check_in"]);
   assert.equal(d.showGeneratedText, false);
 });
 
-test("classifier failure fails closed to restricted", () => {
-  const s = ingest(startSession(), "moment_free_text", [keywordScreen("work is a lot"), fail]);
-  assert.equal(decide(s, "ai").route, "restricted");
-});
-
-test("emergency outranks self-harm crisis, and both outrank everything else", () => {
-  const s = ingest(startSession(), "moment_free_text", [cls("self_harm_ideation", "overdose_or_poisoning", "abuse_or_unsafe_home")]);
-  const d = decide(s, "scripted");
+test("emergency outranks self-harm crisis; no exercises; emergency number shown", () => {
+  const d = decide(ingest(startSession(), "moment_free_text", [cls("self_harm_ideation", "overdose_or_poisoning")]), "scripted", ACTIVE);
   assert.equal(d.route, "emergency_medical");
   assert.deepEqual(d.permittedExercises, []);
+  assert.ok(d.resources.includes("emergency_number") && d.resources.includes("crisis_line"));
+});
+
+test("harm to others shows the emergency number (red-team A18)", () => {
+  const d = decide(ingest(startSession(), "moment_free_text", [cls("harm_to_others")]), "ai", ACTIVE);
+  assert.equal(d.route, "crisis_harm_to_others");
   assert.equal(d.needsEmergencyNumber, true);
 });
 
-test("each emergency category gets its own route", () => {
-  assert.equal(decide(ingest(startSession(), "moment_free_text", [cls("harm_to_others")]), "ai").route, "crisis_harm_to_others");
-  assert.equal(decide(ingest(startSession(), "moment_free_text", [cls("abuse_or_unsafe_home")]), "ai").route, "safety_abuse");
-  assert.equal(decide(ingest(startSession(), "moment_free_text", [cls("medical_emergency")]), "ai").route, "emergency_medical");
-  assert.equal(decide(ingest(startSession(), "moment_free_text", [cls("self_harm_plan_or_intent")]), "ai").route, "crisis_self_harm");
+// ---------- red-team A1: "I'm safe" only from self-harm crisis
+for (const sig of ["overdose_or_poisoning", "self_harm_in_progress", "medical_emergency", "harm_to_others", "abuse_or_unsafe_home", "minor"]) {
+  test(`confirmSafe is refused after ${sig}`, () => {
+    assert.throws(() => confirmSafe(ingest(startSession(), "moment_free_text", [cls(sig)])));
+  });
+}
+test("confirmSafe is refused on normal and restricted routes", () => {
+  assert.throws(() => confirmSafe(startSession()));
+  assert.throws(() => confirmSafe(ingest(startSession(), "moment_free_text", [cls("passive_death_wish")])));
 });
-
-test("self-harm crisis with physical symptoms also shows the emergency number", () => {
-  const d = decide(ingest(startSession(), "moment_free_text", [cls("self_harm_ideation", "physical_symptoms")]), "ai");
-  assert.equal(d.route, "crisis_self_harm");
-  assert.equal(d.needsEmergencyNumber, true);
+test("self-harm crisis plus abuse: confirmSafe is refused (abuse flag blocks it)", () => {
+  assert.throws(() => confirmSafe(ingest(startSession(), "moment_free_text", [cls("self_harm_ideation", "abuse_or_unsafe_home")])));
 });
-
-test("'I'm safe' after a crisis moves to restricted, never back to normal", () => {
-  let s = ingest(startSession(), "moment_free_text", [keywordScreen("I want to kill myself")]);
-  assert.equal(decide(s, "ai").route, "crisis_self_harm");
+test("'I'm safe' after a self-harm crisis moves to restricted, never back to normal", () => {
+  let s = ingest(startSession(), "moment_free_text", screen("I want to kill myself"));
+  assert.equal(s.route, "crisis_self_harm");
   s = confirmSafe(s);
-  assert.equal(decide(s, "ai").route, "restricted");
-  s = ingest(s, "worry_item_add", [keywordScreen("email my manager"), cls()]);
-  assert.equal(decide(s, "ai").route, "restricted");
-  assert.equal(decide(s, "ai").showGeneratedText, false);
+  s = ingest(s, "worry_item_add", screen("email my manager"));
+  const d = decide(s, "ai", ACTIVE);
+  assert.equal(d.route, "restricted");
+  assert.equal(d.showGeneratedText, false);
 });
 
-test("a later input can only raise the route, not lower it", () => {
+// ---------- red-team A3: flags survive a higher route
+test("minor plus abuse: abuse screen shown, youth line included, session terminal", () => {
+  const s = ingest(startSession(), "moment_free_text", screen("im 16 years old and he hits me"));
+  const d = decide(s, "ai", ACTIVE);
+  assert.equal(d.route, "safety_abuse");
+  assert.equal(d.terminal, true);
+  assert.ok(d.resources.includes("youth_line") && d.resources.includes("abuse_line") && d.resources.includes("quick_exit"));
+  assert.deepEqual(d.permittedExercises, []);
+});
+test("a minor flag from the classifier alone ends the session", () => {
+  assert.equal(ingest(startSession(), "moment_free_text", [cls("minor")]).terminal, true);
+});
+
+// ---------- red-team A2: keyword false positives and misses
+for (const t of ["I'm 15 minutes late for the standup", "I am 16 hours into this shift", "My students in year 9 were awful today",
+                 "I teach in 9th grade and marking is endless", "overdosed on coffee before the pitch", "this presentation is going to kill me lol"]) {
+  test(`no crisis keyword for ordinary work sentence: "${t}"`, () => {
+    assert.deepEqual(kw(t).filter((s) => s !== "physical_symptoms"), []);
+  });
+}
+test("'can't breathe with this workload' is a physical notice, not an emergency", () => {
+  assert.deepEqual(kw("I can't breathe with this workload"), ["physical_symptoms"]);
+});
+for (const t of ["I want to hurt myself", "self-harm again tonight", "I want to cut myself", "i want to die/disappear",
+                 "k1ll myself", "kіll myself" /* Cyrillic i */, "su​icidal" /* zero-width */, "suïcidal", "I don’t want to be alive"]) {
+  test(`keyword screen catches: ${JSON.stringify(t)}`, () => {
+    assert.ok(kw(t).some((s) => s.startsWith("self_harm")), `signals: ${kw(t)}`);
+  });
+}
+test("leet mapping cannot invent an age statement", () => {
+  assert.ok(!kw("I'm 1S years old").includes("minor"));
+  assert.ok(kw("I'm 15 years old").includes("minor"));
+});
+
+// ---------- other transitions
+test("check-in 'not sure' or 'no' moves to the self-harm crisis route; 'yes' stays restricted", () => {
+  const r = ingest(startSession(), "moment_free_text", [cls("passive_death_wish")]);
+  assert.equal(checkInAnswer(r, "not_sure").route, "crisis_self_harm");
+  assert.equal(checkInAnswer(r, "no").route, "crisis_self_harm");
+  assert.equal(checkInAnswer(r, "yes").route, "restricted");
+});
+test("later inputs only raise the route", () => {
   let s = ingest(startSession(), "moment_free_text", [cls("passive_death_wish")]);
   s = ingest(s, "worry_item_edit", [cls()]);
   assert.equal(s.route, "restricted");
-  s = ingest(s, "session_note", [keywordScreen("he hits me")]);
+  s = ingest(s, "session_note", screen("he hits me"));
   assert.equal(s.route, "safety_abuse");
 });
-
-test("risk in a LATER text field is caught (worry edit, note)", () => {
-  let s = ingest(startSession(), "moment_free_text", [keywordScreen("deadline friday"), cls()]);
-  s = ingest(s, "worry_item_edit", [keywordScreen("honestly i want to die")]);
+test("risk typed into a LATER field is caught", () => {
+  let s = ingest(startSession(), "moment_free_text", screen("deadline friday"));
+  s = ingest(s, "worry_item_edit", screen("honestly i want to die"));
   assert.equal(s.route, "crisis_self_harm");
 });
-
-test("minor indicator ends the session and cannot be undone", () => {
-  let s = ingest(startSession(), "moment_free_text", [keywordScreen("im 15 and my exam is tomorrow")]);
-  assert.equal(decide(s, "scripted").terminal, true);
-  s = confirmSafe(s);
-  s = ingest(s, "worry_item_add", [cls()]);
-  assert.equal(s.route, "minor_exit");
-});
-
-test("model's own escalate flag raises to restricted and removes sort_and_step", () => {
-  const s = modelEscalated(ingest(startSession(), "moment_free_text", [cls()]));
-  const d = decide(s, "ai");
+test("model escalate raises to restricted and removes sort_and_step", () => {
+  const d = decide(modelEscalated(ingest(startSession(), "moment_free_text", [cls()])), "ai", ACTIVE);
   assert.equal(d.route, "restricted");
   assert.ok(validatePlan(["sort_and_step"], d).length > 0);
 });
-
+test("global kill switch forces restricted and no generated text", () => {
+  const d = decide(ingest(startSession(), "moment_free_text", [cls()]), "ai", { ...ACTIVE, globalRestricted: true });
+  assert.equal(d.route, "restricted");
+  assert.equal(d.showGeneratedText, false);
+});
 test("a recent crisis makes the next session start restricted", () => {
   assert.equal(startSession("crisis_self_harm").route, "restricted");
   assert.equal(startSession("normal").route, "normal");
 });
-
 test("scripted arm never shows generated text", () => {
-  assert.equal(decide(startSession(), "scripted").showGeneratedText, false);
+  assert.equal(decide(startSession(), "scripted", ACTIVE).showGeneratedText, false);
+});
+test("session text is combined for screening so split risk is read together", () => {
+  assert.equal(combineForScreening(["the pills in the drawer", "", "tonight"]), "the pills in the drawer\ntonight");
 });
 
-test("validateGenerated checks EVERY field, including worry items", () => {
-  const p = validateGenerated({ reflection: "You sound tired.", proposal: "Let us breathe first.", worry_items: ["my depression"] });
-  assert.ok(p.some((x) => x.includes("worry_items[0]")));
+// ---------- output and plan validation (red-team A12)
+test("every generated field is checked, including worry items and suggestions", () => {
+  assert.ok(validateGenerated({ worry_items: ["my depression"] }).some((p) => p.includes("worry_items[0]")));
+  assert.ok(validateGenerated({ suggestions: ["Try a cold shower"] }).some((p) => p.includes("suggestions[0]")));
 });
-
-test("standalone 'ice' is banned but 'notice' and 'advice' are not", () => {
-  assert.ok(validateGenerated({ proposal: "Hold some ice for a minute." }).length > 0);
-  assert.deepEqual(validateGenerated({ proposal: "Notice your breath. Good advice is to slow down." }), []);
+for (const t of ["This is a clinically proven way to treat stress.", "Breathing can cure the panic attack.", "Your anxiety sounds intense.",
+                 "A therapist would call this trauma.", "Wow！", "Try snapping a hair tie on your wrist.", "Hold some ice for a minute."]) {
+  test(`validator rejects: ${JSON.stringify(t)}`, () => assert.ok(validateGenerated({ proposal: t }).length > 0));
+}
+test("validator allows ordinary calm text ('notice', 'advice')", () => {
+  assert.deepEqual(validateGenerated({ reflection: "Friday's review is on your mind.", proposal: "Notice your breath. Good advice is to slow down." }), []);
 });
-
-test("generated text containing crisis language is rejected", () => {
-  assert.ok(validateGenerated({ closing: "It is understandable to want to die." }).length > 0);
+test("length limits use code points and apply to suggestions and closing", () => {
+  assert.ok(validateGenerated({ suggestions: ["x".repeat(81)] }).length > 0);
+  assert.ok(validateGenerated({ closing: "y".repeat(201) }).length > 0);
+  assert.deepEqual(validateGenerated({ worry_items: ["🙂".repeat(71)] }), []);
 });
-
-test("plan validation rejects unknown, excess, or non-permitted steps", () => {
-  const d = decide(startSession(), "ai");
+test("a null field is not counted as a word", () => {
+  assert.deepEqual(validateGenerated({ reflection: null, proposal: Array(60).fill("calm").join(" ") }), []);
+});
+test("plan validation rejects empty, too long, duplicate, unknown or non-permitted steps", () => {
+  const d = decide(startSession(), "ai", ACTIVE);
   assert.ok(validatePlan([], d).length > 0);
   assert.ok(validatePlan(["a", "b", "c", "d"], d).length > 0);
+  assert.ok(validatePlan(["sort_and_step", "sort_and_step"], d).length > 0);
   assert.ok(validatePlan(["postpone_worry"], d).length > 0);
   assert.deepEqual(validatePlan(["long_exhale_breathing", "sort_and_step"], d), []);
 });
-
 test("fallback on a crisis route offers no exercise", () => {
-  assert.deepEqual(fallbackPlan(decide(ingest(startSession(), "moment_free_text", [cls("harm_to_others")]), "ai")), []);
-});
-
-test("every declared text ingress point is accepted by ingest", () => {
-  for (const ip of TEXT_INGRESS_POINTS) assert.equal(ingest(startSession(), ip, [cls()]).route, "normal");
+  assert.deepEqual(fallbackPlan(decide(ingest(startSession(), "moment_free_text", [cls("harm_to_others")]), "ai", ACTIVE)), []);
 });

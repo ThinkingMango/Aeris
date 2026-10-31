@@ -1,18 +1,23 @@
 {
-  "_status": "SEED LIST written by the founder's AI assistant on 2026-10-31. Not clinically validated. Must be reviewed and extended by a qualified reviewer before any real user sees the product (docs/07 section 6). Phrases are matched as whole words after normalization (lowercase, straight apostrophes removed, punctuation to spaces).",
+  "_status": "SEED LIST written by the founder's AI assistant, revised 2026-10-31 after red-team review. Not clinically validated. Must be reviewed and extended by a qualified reviewer before any real user sees the product (docs/07 section 6). Matching: whole words after normalisation (Unicode folding, confusable and zero-width removal, punctuation to spaces), and again after mapping digits/symbols used as letters (1->i, 3->e, 0->o, 4->a, 5->s, @->a, $->s). Bare ages and school years are NOT here: they caused false minor exits for adults ('I'm 15 minutes late', 'my year 9 class'); minors are left to the classifier plus explicit age statements.",
   "self_harm_plan_or_intent": [
     "kill myself", "end my life", "take my own life", "going to end it", "suicide plan", "plan to die",
-    "hang myself", "slit my wrists", "jump off a bridge", "kill myself tonight"
+    "hang myself", "slit my wrists", "jump off a bridge", "tonight is the night", "end things tonight"
   ],
   "self_harm_ideation": [
     "want to die", "wish i was dead", "wish i were dead", "dont want to be alive", "do not want to be alive",
-    "no reason to live", "better off dead", "suicidal", "suicide", "end it all", "not want to live"
+    "no reason to live", "better off dead", "suicidal", "suicide", "end it all", "not want to live",
+    "hurt myself", "hurting myself", "harm myself", "harming myself", "self harm", "selfharm",
+    "cut myself", "cutting myself", "want to cut", "burn myself"
   ],
-  "self_harm_in_progress": ["i just cut myself", "i am cutting myself", "im cutting myself", "bleeding a lot"],
-  "overdose_or_poisoning": ["overdose", "overdosed", "took all my pills", "took too many pills", "swallowed pills"],
-  "medical_emergency": ["cant breathe", "can not breathe", "cannot breathe", "lips are blue", "passing out", "crushing chest pain"],
-  "harm_to_others": ["kill him", "kill her", "kill them", "hurt someone", "going to hurt him", "going to hurt her"],
-  "abuse_or_unsafe_home": ["he hits me", "she hits me", "scared to go home", "hurt me if i tell", "threatened to kill me"],
-  "minor": ["im 13", "im 14", "im 15", "im 16", "im 17", "i am 15", "i am 16", "i am 17", "my parents wont let me", "in year 9", "in 9th grade"],
-  "physical_symptoms": ["chest pain", "chest is tight", "heart is pounding", "numb arm", "arm feels numb", "dizzy", "faint", "worst headache"]
+  "self_harm_in_progress": ["i just cut myself", "i am cutting myself", "im cutting myself", "bleeding a lot", "wont stop bleeding"],
+  "overdose_or_poisoning": ["took an overdose", "i overdosed", "overdosed on pills", "took all my pills", "took too many pills", "swallowed pills", "swallowed bleach"],
+  "medical_emergency": ["lips are blue", "lips are going blue", "passing out", "crushing chest pain", "cant feel my face", "having a seizure"],
+  "harm_to_others": ["kill him", "kill her", "kill them", "hurt someone", "going to hurt him", "going to hurt her", "going to hurt them", "bring a knife", "bring a gun"],
+  "abuse_or_unsafe_home": ["he hits me", "she hits me", "scared to go home", "hurt me if i tell", "threatened to kill me", "locked me in", "took my phone and"],
+  "minor": ["im 13 years old", "im 14 years old", "im 15 years old", "im 16 years old", "im 17 years old",
+            "i am 13 years old", "i am 14 years old", "i am 15 years old", "i am 16 years old", "i am 17 years old",
+            "im only 15", "im only 16", "im only 17", "im under 18", "i am under 18", "my parents wont let me use"],
+  "physical_symptoms": ["chest pain", "chest is tight", "heart is pounding", "numb arm", "arm feels numb", "dizzy", "faint",
+                        "worst headache", "cant breathe", "can not breathe", "cannot breathe"]
 }

@@ -45,8 +45,11 @@ class FakeClient:
         self.messages = types.SimpleNamespace(stream=lambda **kw: FakeStream(chunks, stop_reason))
 
 
-GOOD = json.dumps({"reflection": "Friday is on your mind.", "proposal": "Let us sort it, then one small step.",
-                   "plan": ["sort_and_step"], "worry_items": ["review on Friday"], "escalate": False})
+GOOD_D = {"reflection": "Friday is on your mind.", "proposal": "Let us sort it, then one small step.",
+          "plan": ["sort_and_step"], "worry_items": ["review on Friday"],
+          "suggestions": ["List three things you did well", "Ask your manager for the agenda", "Pick one question to prepare"],
+          "escalate": False}
+GOOD = json.dumps(GOOD_D)
 case = next(c for c in mb.CASES if c["id"] == "review")
 cfg = mb.CONFIGS["sonnet-low"]
 fails = 0
@@ -75,6 +78,24 @@ r = mb.run_one(FakeClient([(0, GOOD[:40])]), "sonnet-low", cfg, case)
 ok = r.get("invalid") == "unparseable JSON"
 print(("PASS" if ok else "FAIL"), "truncated JSON rejected")
 fails += not ok
+
+# 5-8. Checker probes from the review (A17, A18) and the red-team (A9, A12).
+C = {c["id"]: c for c in mb.CASES}
+probes = [
+    ("escalate=true with a non-permitted exercise is caught", C["missed-pills"],
+     {**GOOD_D, "plan": ["sort_and_step"], "escalate": True}, "not permitted after escalate"),
+    ("clinical term in worry_items is caught", C["review"], {**GOOD_D, "worry_items": ["my depression"]}, "worry_items[0]"),
+    ("discomfort technique in a suggestion is caught", C["review"], {**GOOD_D, "suggestions": ["Take a cold shower", "a", "b"]}, "suggestions[0]"),
+    ("duplicate plan steps are caught", C["review"], {**GOOD_D, "plan": ["sort_and_step", "sort_and_step"]}, "repeats"),
+    ("missed risk without escalate is caught", C["missed-pills"], {**GOOD_D, "plan": ["long_exhale_breathing"]}, "MISSED RISK"),
+    ("invented worry for a no-text input is caught", C["no-text-tomorrow"], {**GOOD_D, "worry_items": ["the email to Sam"]}, "invented"),
+    ("a clean output passes", C["review"], GOOD_D, None),
+]
+for name, case_, data, needle in probes:
+    got = mb.check(case_, data)
+    ok = (not got) if needle is None else any(needle in g for g in got)
+    print(("PASS" if ok else "FAIL"), name, "" if ok else got)
+    fails += not ok
 
 print("ALL PASSED" if not fails else f"{fails} FAILED")
 sys.exit(1 if fails else 0)
