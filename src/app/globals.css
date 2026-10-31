@@ -1135,10 +1135,15 @@ button:disabled {
 }
 
 .reset-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-block: 8px;
+  background: var(--bg);
 }
 
 .reset-topbar .aeris-button {
@@ -1213,6 +1218,28 @@ button:disabled {
   flex-direction: column;
   gap: 12px;
   margin-top: 24px;
+}
+
+.reset-save-error {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.reset-feedback {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.reset-feedback h2 {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-wrap: balance;
 }
 
 .saved-step-block {

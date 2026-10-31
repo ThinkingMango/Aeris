@@ -227,10 +227,12 @@ export function ChoiceRow({
   choices,
   value,
   onChange,
+  ariaLabel = "Conversation type",
 }: {
   choices: { id: string; label: string }[];
   value: string | null;
   onChange: (value: string) => void;
+  ariaLabel?: string;
 }) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -241,7 +243,7 @@ export function ChoiceRow({
   };
 
   return (
-    <div className="choice-row" role="radiogroup" aria-label="Conversation type">
+    <div className="choice-row" role="radiogroup" aria-label={ariaLabel}>
       {choices.map((choice, index) => {
         const checked = value === choice.id;
         return (
