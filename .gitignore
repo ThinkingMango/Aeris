@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 # pnpm-lock.yaml is the lockfile for this repo
 package-lock.json
+next-env.d.ts
+*.tsbuildinfo
