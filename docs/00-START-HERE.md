@@ -43,6 +43,7 @@ Everything checkable is checkable with one command. Node 22.6+, Python 3.10+, an
 | A keyword list alone is not a safety net | `python3 evals/classifier_eval.py --screen keyword` | Held-out crisis 4/8 exact (and contaminated; see E-SAF-05) |
 | Exact statistics behind the evaluation and pilot sizes | `python3 evals/stats.py` | 0/15 → 18.1%; n ≥ 59 for <5%; crossover needs 27/40 |
 | The model harness rejects bad and malformed output, times approval on confirmed-cold calls, and shows every field to reviewers | `python3 evals/tests/test_bakeoff_offline.py` | 17 PASS, ALL PASSED |
+| The Stage 2 prototype obeys the no-typing rules in a real browser, for all five conversation types | `npm run test:e2e` (needs Playwright with Chromium) | 12 passing once the v0 fixes in [12](12-v0-prompts.md) R7 are applied; 9 of 12 before |
 | The economics tables | `python3 models/cohort_model.py` | Matches [11](11-economics.md): 646 signups a month, but first month with no loss at month 73; $1.06 per signup; $10k a month in revenue needs about 8,300 signups a month |
 
 ## For challengers (ChatGPT, Gemini, Grok, people)

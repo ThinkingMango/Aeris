@@ -124,6 +124,20 @@ Analytics: privacy-friendly page-view counts with no cookies or identifiers, ONL
 Audit the whole project against the AERIS RULES and docs, and list every violation with its file and line. Check especially: any <input>, <textarea>, contenteditable or search field outside the landing-page email field; any red or red-like colour; any analytics, fetch, cookie or storage use inside /reset, /help or /more; any wording not from content/reset_content.json; any pre-selected option; any text under 14px or ink-soft under 16px; any touch target under 56px; missing reduced-motion handling; missing HelpFooter on any screen. Then fix them.
 ```
 
+## R7 — Fixes from the first code review (paste after R6)
+
+Found by the browser tests in `tests/e2e/prototype.test.mjs` on the v0 code merged on 31 October 2026 ([03](03-review-log.md) Part H). Paste as one message:
+
+```
+Follow the AERIS RULES. Fix these four problems, found by automated browser tests, without changing anything else:
+1. "/" shows a blank page. Make "/" redirect to "/reset" until the landing page (R5) is built.
+2. A saved opener comes back wrong. The step id "opener" exists in every conversation type, but localStorage "aeris.savedStep" stores only the step id, so A1 shows the "Giving hard feedback" step for any type, and never shows the chosen sentence. Store { typeId, stepId, openerIndex } (openerIndex only for "opener"). On A1, find the type by typeId and the step inside it, and show the step title plus, for an opener, the chosen opener's text. Ignore anything stored in the old format (treat it as nothing saved).
+3. Add a "Back" TextLink on A4 (to A3, keeping the A3 choices), A5 (to A4, keeping the sorting) and A7 (to A5, keeping the chosen step). A2 and A3 already have one.
+4. When the step changes, scroll the page to the top and move keyboard focus to the new step's h1 (give it tabIndex={-1}), so the heading is never hidden under the sticky Stop bar and screen readers announce the new step. Respect reduced motion: no smooth scrolling when it is on.
+```
+
+**Check it worked.** Push to a branch and ask Claude Code to run `npm run test:e2e`. It should report 12 of 12 passing.
+
 ---
 
 # Stage 5 prompts (do not use before gate G5a)
