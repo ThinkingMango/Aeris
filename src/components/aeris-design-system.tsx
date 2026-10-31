@@ -10,7 +10,8 @@ import {
   SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
-import resetContent from "@/content/reset_content.json";
+import resetContent from "../../content/reset_content.json";
+import { helplines } from "../../content/helplines";
 
 type Appearance = "system" | "light" | "dark";
 type SortValue = "mine" | "not-mine" | null;
@@ -457,7 +458,7 @@ function ThemeBoard({ theme }: { theme: "light" | "dark" }) {
 
         <section className="component-section" aria-labelledby={`${theme}-support-title`}>
           <h3 id={`${theme}-support-title`}>SupportButton</h3>
-          <SupportButton />
+          <SupportButton number={helplines.emergencyNumber} />
         </section>
 
         <section className="component-section" aria-labelledby={`${theme}-stop-title`}>

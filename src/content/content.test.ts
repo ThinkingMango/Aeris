@@ -5,7 +5,8 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import content from "./reset_content.json" with { type: "json" };
+import content from "../../content/reset_content.json" with { type: "json" };
+import { helplines } from "../../content/helplines.ts";
 import { validateGenerated, keywordScreen } from "../safety/controller.ts";
 
 const SITUATIONS = ["conv_feedback", "conv_ask", "conv_criticism", "conv_say_no", "conv_other"]; // supabase/schema.sql app_situation
@@ -55,4 +56,16 @@ for (const t of content.types) {
 test("worry labels are the ones on screen A3", () => {
   assert.deepEqual(content.worries.map((w) => w.label),
     ["How they'll react", "Saying it badly", "Not sure what I want", "It feels unfair", "What it means for my job"]);
+});
+
+test("helpline values stay as unverified placeholders", () => {
+  assert.deepEqual(helplines, {
+    country: "[pilot country]",
+    emergencyNumber: "[emergency number]",
+    crisisLine: "[crisis line]",
+    abuseLine: "[abuse line]",
+    workplaceAdvice: { label: "[workplace advice service]", url: "" },
+    unionOrEAP: { label: "[union or employee assistance]", url: "" },
+    employmentLaw: { label: "[employment-law help]", url: "" },
+  });
 });
