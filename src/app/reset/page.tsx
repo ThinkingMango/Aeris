@@ -6,6 +6,7 @@ import resetContent from "../../../content/reset_content.json";
 import {
   BreathingCircle,
   ChoiceButton,
+  ChoiceRow,
   Chip,
   OptionCard,
   PrimaryButton,
@@ -16,10 +17,50 @@ import { GhostButton, ProgressDots, StopButton, TextLink } from "@/components/ae
 
 type ConversationType = (typeof resetContent.types)[number];
 type ResetStep = ConversationType["steps"][number];
+type SavedStepSelection = { step: ResetStep; openerIndex: number | null };
 type SortValue = "mine" | "not-mine";
 type BreathingOrigin = 1 | 5;
 
 const savedSteps = resetContent.types.flatMap(({ steps }) => steps);
+const maximumOpenerCount = Math.max(...resetContent.types.map(({ openers }) => openers.length));
+const feedbackChoices = [
+  { id: "yes", label: "Yes" },
+  { id: "a-bit", label: "A bit" },
+  { id: "no", label: "No" },
+];
+
+const readSavedStep = (serialized: string | null): SavedStepSelection | null => {
+  if (!serialized) return null;
+
+  let stepId = serialized;
+  let openerIndex: number | null = null;
+
+  try {
+    const value: unknown = JSON.parse(serialized);
+    if (
+      value &&
+      typeof value === "object" &&
+      "stepId" in value &&
+      typeof value.stepId === "string"
+    ) {
+      stepId = value.stepId;
+      const storedIndex = "openerIndex" in value ? value.openerIndex : null;
+      if (
+        typeof storedIndex === "number" &&
+        Number.isInteger(storedIndex) &&
+        storedIndex >= 0 &&
+        storedIndex < maximumOpenerCount
+      ) {
+        openerIndex = storedIndex;
+      }
+    }
+  } catch {
+    // Older saved steps contain only the plain step id.
+  }
+
+  const step = savedSteps.find(({ id }) => id === stepId);
+  return step ? { step, openerIndex: step.id === "opener" ? openerIndex : null } : null;
+};
 
 export default function ResetPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -31,7 +72,9 @@ export default function ResetPage() {
   const [copiedOpenerIndex, setCopiedOpenerIndex] = useState<number | null>(null);
   const [breathingOrigin, setBreathingOrigin] = useState<BreathingOrigin>(1);
   const [breathingComplete, setBreathingComplete] = useState(false);
-  const [savedStep, setSavedStep] = useState<ResetStep | null>(null);
+  const [feedbackAnswer, setFeedbackAnswer] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const [savedStep, setSavedStep] = useState<SavedStepSelection | null>(null);
   const typeChoiceButtons = useRef<(HTMLButtonElement | null)[]>([]);
   const optionStepButtons = useRef<(HTMLButtonElement | null)[]>([]);
   const openerButtons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -39,8 +82,7 @@ export default function ResetPage() {
 
   useEffect(() => {
     try {
-      const savedStepId = window.localStorage.getItem("aeris.savedStep");
-      setSavedStep(savedStepId ? savedSteps.find(({ id }) => id === savedStepId) ?? null : null);
+      setSavedStep(readSavedStep(window.localStorage.getItem("aeris.savedStep")));
     } catch {
       setSavedStep(null);
     }
@@ -66,6 +108,8 @@ export default function ResetPage() {
     setSelectedStepId(null);
     setSelectedOpenerIndex(null);
     setCopiedOpenerIndex(null);
+    setFeedbackAnswer(null);
+    setSaveError(false);
     if (copyTimeoutRef.current !== null) {
       window.clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = null;
@@ -209,9 +253,15 @@ export default function ResetPage() {
   const canChooseStep =
     selectedStepId !== null &&
     (selectedStepId !== "opener" || selectedOpenerIndex !== null);
+  const chosenStep = selectedType?.steps.find(({ id }) => id === selectedStepId) ?? null;
+  const chosenOpener =
+    selectedType && selectedStepId === "opener" && selectedOpenerIndex !== null
+      ? selectedType.openers[selectedOpenerIndex] ?? null
+      : null;
 
   const deleteSavedStep = () => {
     setSavedStep(null);
+    setSaveError(false);
     try {
       window.localStorage.removeItem("aeris.savedStep");
     } catch {
@@ -219,11 +269,28 @@ export default function ResetPage() {
     }
   };
 
+  const saveChosenStep = () => {
+    if (!selectedType || !canChooseStep || !chosenStep) return;
+
+    const storedValue: { stepId: string; openerIndex?: number } = { stepId: chosenStep.id };
+    if (chosenStep.id === "opener" && selectedOpenerIndex !== null) {
+      storedValue.openerIndex = selectedOpenerIndex;
+    }
+
+    try {
+      window.localStorage.setItem("aeris.savedStep", JSON.stringify(storedValue));
+      setSavedStep({ step: chosenStep, openerIndex: storedValue.openerIndex ?? null });
+      setSaveError(false);
+    } catch {
+      setSaveError(true);
+    }
+  };
+
   return (
     <main className="app-main reset-main" aria-labelledby="reset-heading">
       <div className="reset-topbar">
         <StopButton onClick={stopReset} />
-        <ProgressDots current={currentStep === 6 ? breathingOrigin : currentStep} total={5} />
+        <ProgressDots current={currentStep === 6 ? breathingOrigin : Math.min(currentStep, 5)} total={5} />
       </div>
 
       <div className="reset-content">
@@ -238,7 +305,7 @@ export default function ResetPage() {
               <div className="saved-step-block">
                 <StepCard
                   title="Your saved step"
-                  detail={`${savedStep.title} — ${savedStep.detail}`}
+                  detail={`${savedStep.step.title} — ${savedStep.step.detail}`}
                 />
                 <div className="saved-step-actions">
                   <TextLink onClick={deleteSavedStep}>Delete</TextLink>
@@ -438,7 +505,11 @@ export default function ResetPage() {
               ))}
             </div>
             <div className="reset-actions reset-actions-stack">
-              <PrimaryButton type="button" disabled={!canChooseStep}>
+              <PrimaryButton
+                type="button"
+                disabled={!canChooseStep}
+                onClick={() => setCurrentStep(7)}
+              >
                 That&apos;s my step
               </PrimaryButton>
             </div>
@@ -472,11 +543,42 @@ export default function ResetPage() {
                 >
                   {breathingOrigin === 1 ? "Start the reset" : "Back to your step"}
                 </PrimaryButton>
-                <GhostButton type="button" onClick={() => setCurrentStep(1)}>
+                <GhostButton type="button" onClick={stopReset}>
                   Done
                 </GhostButton>
               </div>
             ) : null}
+          </section>
+        ) : null}
+
+        {currentStep === 7 && selectedType && chosenStep ? (
+          <section className="reset-screen" aria-labelledby="reset-heading">
+            <h1 id="reset-heading" className="screen-heading font-serif">
+              Your first step:
+            </h1>
+            <StepCard title={chosenStep.title} detail={chosenOpener ?? chosenStep.detail} />
+            <div className="reset-actions reset-actions-stack">
+              <GhostButton type="button" onClick={saveChosenStep}>
+                Save on this phone
+              </GhostButton>
+              {saveError ? (
+                <p className="reset-save-error" role="status">
+                  Couldn&apos;t save on this phone
+                </p>
+              ) : null}
+              <PrimaryButton type="button" onClick={stopReset}>
+                Done
+              </PrimaryButton>
+            </div>
+            <section className="reset-feedback" aria-labelledby="reset-feedback-heading">
+              <h2 id="reset-feedback-heading">Did this help you prepare?</h2>
+              <ChoiceRow
+                ariaLabel="Did this help you prepare?"
+                choices={feedbackChoices}
+                value={feedbackAnswer}
+                onChange={setFeedbackAnswer}
+              />
+            </section>
           </section>
         ) : null}
       </div>
