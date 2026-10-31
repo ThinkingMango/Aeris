@@ -55,31 +55,34 @@ User taps a chip + slides tension + (optional) types a sentence
 
 ## 3. Which model does what (and why)
 
-I follow Anthropic's current guidance: default to **Claude Opus 5.5** (`claude-opus-5-5`) for anything that needs judgment, and use the smaller models for narrow, high-volume tasks. Prices (first-party API, October 2026):
+**Updated 31 October 2026 after the model deep dive (Doc 15).** The default for every user-facing call is now **Claude Sonnet 5.5**. Anthropic's system cards show Sonnet 5.5 and Opus 5.5 are equally safe on mental-health tests within the margin of error, and Sonnet is half the price and in a faster speed class. Opus 5.5 remains the upgrade path if the Day 18 blind test shows a clear tone win. Prices (first-party API, verified 31 October 2026):
 
 | Model | Input per 1M tokens | Output per 1M tokens | Cache read per 1M | Use in Aeris |
 |---|---|---|---|---|
-| Claude Opus 5.5 `claude-opus-5-5` | $4.00 | $20.00 | $0.20 | **Default** for Step 2 (read the moment), Step 6 (closing), Step 7 (weekly reflection) |
-| Claude Sonnet 5.5 `claude-sonnet-5-5` | $2.00 | $10.00 | $0.20 | Your cost-saving alternative for Steps 2, 6, 7 (roughly half the cost; see Doc 11). **Your call.** |
-| Claude Haiku 5.5 `claude-haiku-5-5` | $0.10 | $0.50 | — | Step 1 safety classifier; Step 7 bulk pattern tagging |
+| Claude Sonnet 5.5 `claude-sonnet-5-5` | $2.00 | $10.00 | $0.10 | **Default** for Step 2 (read the moment), the worry-sort suggestions, Step 6 (closing), Step 7 (weekly reflection, via batch) |
+| Claude Opus 5.5 `claude-opus-5-5` | $4.00 | $20.00 | $0.20 | Upgrade path for Step 2 if the Day 18 blind test shows a clear tone win (Doc 15 §7) |
+| Claude Haiku 5.5 `claude-haiku-5-5` | $0.10 | $0.50 | $0.01 | Step 1 safety classifier; Step 7 bulk pattern tagging |
 
-**Why Opus for the "read":** This is the one sentence that makes or breaks the session. It must be warm, precise, short, and must choose the right intervention. Opus at *low effort* is fast and cheap enough for this (see cost table). If after launch you find Sonnet 5.5 reads just as well in your own testing, switch; it is a one-line change. Anthropic's guidance is explicit that this is the product owner's decision, so I have not made it for you.
+**Why Sonnet for the "read":** This is the one sentence that makes or breaks the session. It must be warm, precise, short, and must choose the right intervention. Doc 15 compares the three Claude models on Anthropic's published safety, honesty, speed, and price evidence. Sonnet 5.5 matches Opus 5.5 on safety within the error bars, is close on honesty, is labelled "Fast" where Opus is "Moderate", can turn thinking off entirely, and costs half as much. Switching the model is a one-line environment variable, so the Day 18 test can overrule this.
 
-**Why Haiku for safety:** The safety classifier runs on *every* input and must be fast (under 1 second). It answers a narrow question. Haiku 5.5 is 40× cheaper than Opus for this and is good at classification. **But:** Haiku has no server-side refusal fallback, so the code treats any error or non-answer from the classifier as "level 2, elevated" (fail safe, never fail open).
+**Why Haiku for safety:** The safety classifier runs on *every* input and must be fast (under 1 second). It answers a narrow question. Haiku 5.5 is labelled "Fastest", scored highest of the three on Anthropic's single-turn self-harm test (99.61% harmless on the API), and is 20× cheaper than Sonnet. Its output is a form no user reads, so its weaker honesty scores do not matter in this role. **But:** Haiku has no server-side refusal fallback, so the code treats any error or non-answer from the classifier as "level 2, elevated" (fail safe, never fail open).
 
 ### Model settings (so Claude Code sets them right)
-- Opus 5.5: thinking is always on; control with `output_config.effort`. Use **`effort: "low"`** for the read and closing calls (chat-style work; the model's default is `medium`, which is slower and costlier than we need). Enable the server-side **`fallbacks: "default"`** (beta header `server-side-fallback-2026-07-01`) so that if a safety classifier on Anthropic's side declines the request, it automatically routes to a fallback model rather than erroring. Always check `stop_reason` before reading content; a `refusal` stop reason means show a gentle retry, never a raw error.
+- Sonnet 5.5 (read, suggestions, closing): set **`output_config.effort: "low"`** explicitly (the model's default is `high`, which thinks before almost every reply and delays the first word). For the suggestion and closing calls, turn thinking off with `thinking: {type: "between_tools"}`. For the read, test both "low" and "off" on Day 18 (Doc 15 §7, rule 5). Enable server-side **`fallbacks: "default"`** (beta header `server-side-fallback-2026-07-01`); it rarely triggers for Aeris, because none of Anthropic's blocking classifiers target mental-health text, but it costs nothing. Always check `stop_reason` before reading content; a `refusal` stop reason means show a gentle retry, never a raw error.
+- Haiku 5.5 (classifier): **`thinking: {type: "disabled"}`** with `effort: "low"`. Haiku thinks by default, and thinking counts toward `max_tokens`, so without this a small cap can be used up before any answer appears. Do not send `fallbacks` to Haiku; it does not support them.
+- Never send `temperature`, `top_p`, or `top_k`. All three models reject them.
+- If Opus 5.5 is ever swapped in: thinking cannot be turned off, effort default is `medium`, set `low` explicitly.
 - Streaming for the read call so the first line appears within ~1 second; the UI fades lines in.
 - Structured outputs (`output_config.format` with a JSON schema) for Step 2 and Step 7, so the code gets exact fields.
-- Prompt caching: the system prompt + intervention library description (~3,000 tokens) is placed first and marked with `cache_control` so repeat calls pay ~5% for it.
-- `max_tokens`: 600 for the read (it only needs ~120 words plus the JSON), 200 for closing, 256 for the classifier.
+- Prompt caching: the system prompt + intervention library description (~3,000 tokens) is placed first and marked with `cache_control` so repeat calls pay 5% of the input price for it. **Caches are model-specific and expire after 5 minutes without use**, so keep every user-facing call on one model, and expect cold caches at launch traffic (Doc 15 §5).
+- `max_tokens`: 1,000 for the read (about 150 tokens of JSON plus room for brief thinking), 400 for suggestions and closing, 512 for the classifier.
 
 ---
 
 ## 4. Step 1 — Safety classifier (detailed)
 
 **Input:** the user's free text (if any) + selected chip + tension score + the last 2 turns if in a chat.
-**Model:** Haiku 5.5, structured output.
+**Model:** Haiku 5.5, thinking disabled, effort low, structured output.
 **Output schema:**
 
 ```json
@@ -122,6 +125,7 @@ The full system prompt for the classifier is in Doc 10 §4.
   "plan": ["breathe_90", "worry_sort"],
   "alternatives": [["grounding", "next_smallest_step"], ["postpone_worry", "breathe_60"]],
   "worry_items": ["Sending the email", "How my manager will react", "Whether I'll sleep"],
+  "escalate": false,
   "disclosure_needed": true
 }
 ```
@@ -143,15 +147,37 @@ Voice: calm, plain, warm, brief. Sentence case. No exclamation marks. No
 emoji. No praise ("great job"). No questions in this step. Never more than
 60 words across reflection and proposal.
 
-Never: diagnose, name a condition or disorder, mention medication, say
-"it's just anxiety", promise availability ("I'm always here"), or suggest
-an exercise that is not in the library.
+Never: diagnose, name a condition or disorder (including depression),
+mention medication, say "it's just anxiety", promise availability ("I'm
+always here"), or suggest an exercise that is not in the library.
+
+Wellbeing rules (adapted from Anthropic's published claude.ai prompt; see
+Doc 15 §6 for why each line is here):
+- Validate how the person feels. Do not validate untrue beliefs or
+  harmful behaviours.
+- Reflect only what the person actually said. Do not add feelings,
+  motives, or causes they did not name. Do not reflect in a way that
+  amplifies the negative experience.
+- Never suggest substitutes for self-harm that use discomfort, pain, or
+  sensory shock, such as ice, rubber bands, cold water, or sour food.
+- Never say self-harm works or helps, even if the person says it does.
+- If the person talks about wanting to die or not wanting to be here, do
+  not say the wish makes sense. You can say the pain is real without
+  agreeing with the wish. Set escalate=true and plan=["check_in"].
+- If the person is reluctant to seek help, do not validate the
+  reluctance. Acknowledge the feeling and gently encourage reaching a
+  person.
+- In a crisis, do not ask questions that pull the person deeper. Be a
+  calm, stabilizing presence.
 
 If the input mentions physical symptoms (chest pain, trouble breathing,
 fainting, numbness), the plan must begin with "physical_notice".
 
 If elevated=true, the plan must begin with "check_in" and must not include
-"postpone_worry".
+"postpone_worry" or "physical_reset".
+
+Set escalate=true if you notice any sign of risk that the input flags did
+not mention.
 
 Patterns: waiting_for_tomorrow, replaying_conversation, body_first,
 waiting_for_news, too_much_at_once, checking_loop, late_night_loop,
@@ -166,7 +192,7 @@ worst_best_likely — catastrophizing a specific event — 2 min
 postpone_worry — rumination late at night, checking loops — 1 min
 self_compassion — self-criticism, shame — 2 min
 muscle_release — physical tension — 3 min
-physical_reset — stuck arousal (cold water, movement) — 1 min
+physical_reset — stuck arousal (gentle movement, change of room) — 1 min
 next_smallest_step — overwhelm, avoidance — 2 min
 body_scan — late night, winding down — 3 min
 sleep_wind_down — late_night_loop end — 3 min

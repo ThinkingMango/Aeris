@@ -51,41 +51,41 @@ A typical Moment makes these calls (Doc 08):
 | Closing line | main | 300 | 3,000 | 80 |
 | Nightly tag extraction (40% of sessions have text) | Haiku 5.5 | 600 | 0 | 60 |
 
-Cache writes cost 1.25× input price on the first call of a prompt version; amortized across thousands of sessions it is negligible, so it is excluded.
+**Correction (31 October 2026):** an earlier version said cache writes were negligible. That is only true at high traffic. A cached prompt expires after 5 minutes without use, so at launch most sessions start "cold" and the first call pays the cache-write price (1.25× input). The tables below now show both cases.
 
 ### Cost per session by main-model choice
 
-| Main model | Read | Suggest | Close | Safety + tags (Haiku) | **Per session** | **Per user/month at 12 sessions** |
-|---|---|---|---|---|---|---|
-| **Opus 5.5** ($4 / $20, cache $0.20) | $0.0124 | $0.0027 | $0.0034 | $0.0002 | **≈ $0.019** | **≈ $0.23** |
-| **Sonnet 5.5** ($2 / $10, cache $0.20) | $0.0065 | $0.0014 | $0.0018 | $0.0002 | **≈ $0.010** | **≈ $0.12** |
-| **Haiku 5.5** everywhere ($0.10 / $0.50) | $0.0003 | $0.0001 | $0.0001 | $0.0002 | **≈ $0.0007** | **≈ $0.01** |
+| Main model | Read (warm / cold) | Suggest | Close | Safety + tags (Haiku) | **Per session (warm / cold)** |
+|---|---|---|---|---|---|
+| **Sonnet 5.5, recommended** ($2 / $10, cache read $0.10, write $2.50) | $0.0062 / $0.0134 | $0.0014 | $0.0017 | $0.0002 | **$0.0095 / $0.0167** |
+| **Opus 5.5** ($4 / $20, cache read $0.20, write $5.00) | $0.0124 / $0.0268 | $0.0028 | $0.0034 | $0.0002 | **$0.0188 / $0.0332** |
+| **Haiku 5.5** everywhere ($0.10 / $0.50) | $0.0003 / $0.0007 | $0.0001 | $0.0001 | $0.0002 | **$0.0007 / $0.0010** |
 
-Worked example for the Opus read: 700 × $4/1M = $0.0028; 3,000 cached × $0.20/1M = $0.0006; 450 × $20/1M = $0.0090. Total $0.0124.
+Worked example for the Sonnet read, warm: 700 × $2/1M = $0.0014; 3,000 cached × $0.10/1M = $0.0003; 450 × $10/1M = $0.0045. Total $0.0062. Cold: the 3,000 cached tokens are written at $2.50/1M instead, $0.0075, so the read costs $0.0134.
 
 ### Add a safety margin
 Real usage is messier: retries, guard-fail rewrites, longer free text, users who tap "try something else" three times, and thinking tokens that run longer than estimated. **Multiply by 2.5** for planning:
 
-| Main model | Planning cost per session | Per user/month (12 sessions) | 1,000 active users/month |
+| Main model | Planning cost per session (warm–cold) | Per user/month (12 sessions) | 1,000 active users/month |
 |---|---|---|---|
-| Opus 5.5 | **~$0.05** | **~$0.60** | **~$600** |
-| Sonnet 5.5 | **~$0.025** | **~$0.30** | **~$300** |
-| Haiku 5.5 | **~$0.002** | **~$0.02** | **~$20** |
+| **Sonnet 5.5, recommended** | **~$0.024–0.042** | **~$0.28–0.50** | **~$280–500** |
+| Opus 5.5 | ~$0.047–0.083 | ~$0.56–1.00 | ~$560–1,000 |
+| Haiku 5.5 | ~$0.002–0.003 | ~$0.02–0.03 | ~$20–30 |
 
 **Interpretation:**
-- Even on Opus, a Plus subscriber paying $7.99 costs you well under $1 in AI. The margin is healthy.
-- A free user capped at 3 sessions costs at most ~$0.15/month on Opus. You can afford a lot of free users.
-- The weekly reflection (Plus only, Batch API at 50% off) adds ~$0.01–0.02 per user per week on Opus. Negligible.
-- **Haiku-everywhere** is 25× cheaper but I do not recommend it for the "read" step: the one sentence that names the pattern and proposes the plan is the product. Test it yourself on Day 18 and decide.
+- On the recommended Sonnet setup, a Plus subscriber paying $7.99 costs you about 30 to 50 cents in AI. Even on Opus with a cold cache it stays under $1. The margin is healthy.
+- A free user capped at 3 sessions costs at most ~$0.13/month on Sonnet with a cold cache. You can afford a lot of free users.
+- The weekly reflection (Plus only, Batch API at 50% off) adds ~$0.007 per user per week on Sonnet, ~$0.014 on Opus. Negligible either way.
+- **Haiku-everywhere** is about 15× cheaper than Sonnet, but I do not recommend it for user-facing words at launch: Anthropic's own system card says Opus and Sonnet are "strictly better" than Haiku on most honesty measures. Doc 15 explains, and the Day 18 test can revisit it.
 
-### What Anthropic's own guidance says about this choice
-Their guidance to builders is to default to Opus 5.5 and to treat downgrading for cost as the product owner's decision after measuring on real requests, because lower effort on the newest model often matches a cheaper model at high effort. I have built the plan so that switching the main model is a one-line change and the admin view shows cost per session, so you can decide with data in week 1 after launch.
+### How this choice was made
+Doc 15 is the full deep dive. In short: on Anthropic's published mental-health tests the three models are within the margin of error of each other, so the choice rests on honesty, speed, and price, where Sonnet 5.5 is the best balance for user-facing words and Haiku 5.5 is best for everything else. Switching the main model is a one-line change, and the admin view shows cost per session, so you can decide with data in week 1 after launch.
 
 ---
 
 ## 4. Month-by-month cash plan (first 6 months, "Small" scenario from Doc 04)
 
-| Month | Tools | AI (Opus, w/ margin) | One-time | Revenue | **Net** |
+| Month | Tools | AI (w/ margin; written for Opus, so conservative for Sonnet) | One-time | Revenue | **Net** |
 |---|---|---|---|---|---|
 | 1 (build) | $280 | $10 | $300 (company, domain, misc) | $0 | **−$590** |
 | 2 (closed beta → launch) | $280 | $30 | $2,500 (lawyer, security review) | $0 | **−$2,810** |

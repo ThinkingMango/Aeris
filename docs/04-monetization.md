@@ -56,7 +56,7 @@
 | Mix: monthly vs. annual | 40% monthly / 60% annual |
 | Average monthly revenue per paying user (blended, after Stripe ~3% + $0.30) | ~$5.40 |
 | Monthly churn of paying users | 8% monthly plan, ~1.5% annual (annual churns at renewal) |
-| AI cost per paying user per month (Opus 5.5, ~12 sessions) | ~$1.50 |
+| AI cost per paying user per month (~12 sessions; written for Opus 5.5 with a wide margin. The recommended Sonnet 5.5 setup is ~$0.30–0.50, Doc 15) | ~$1.50 |
 | AI cost per free user per month (3 sessions max, most use 1) | ~$0.12 |
 
 **Scenario table at month 6:**

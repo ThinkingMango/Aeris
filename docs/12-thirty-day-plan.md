@@ -103,7 +103,7 @@ Also tell Claude Code: *"Add privacy-respecting analytics (Vercel Analytics) wit
 
 ### Day 15 — The read function
 Tell Claude Code:
-> "Build the `moment-read` Supabase Edge Function per docs/08 §2–5 and docs/10: keyword pre-check, Haiku 5.5 safety classifier with structured output and 2.5 s timeout failing to level 2, then Claude Opus 5.5 at effort low with the cached system prompt, structured output matching the schema, server-side fallbacks enabled, streaming the reflection to the client, guards.ts validation (plan IDs, length, banned phrases, retry once then default plan), write the session row and an ai_calls row with cost, enforce can_start_ai_session and the per-user and global daily spend caps. Store all prompts in _shared/prompts.ts with a version string. Put the Anthropic key in Supabase Edge Function secrets, never in the client."
+> "Build the `moment-read` Supabase Edge Function per docs/08 §2–5 and docs/10: keyword pre-check, Haiku 5.5 safety classifier with structured output and 2.5 s timeout failing to level 2, then Claude Sonnet 5.5 at effort low (model set by a MODEL_READ environment variable) with the cached system prompt including the wellbeing rules in docs/15 §6, structured output matching the schema, server-side fallbacks enabled, streaming the reflection to the client, guards.ts validation (plan IDs, length, banned phrases, retry once then default plan), write the session row and an ai_calls row with cost, enforce can_start_ai_session and the per-user and global daily spend caps. Store all prompts in _shared/prompts.ts with a version string. Put the Anthropic key in Supabase Edge Function secrets, never in the client."
 
 You do: in Supabase → *Edge Functions* → *Secrets*, add `ANTHROPIC_API_KEY`. Claude Code deploys. Test from the app: tap a chip, slide, see a real reflection stream in.
 
@@ -121,9 +121,9 @@ Done when: the test passes and you have personally seen the crisis screen work o
 
 ### Day 18 — Model comparison & cost check
 Tell Claude Code:
-> "Add a MODEL_READ environment variable so the main model is switchable. Run the same 20 sample inputs through Opus 5.5 and Sonnet 5.5 at effort low, save both outputs side by side in a markdown table with cost per call from usage, and show me."
+> "Copy the final read system prompt from supabase/functions/_shared/prompts.ts into evals/model_bakeoff.py, then run evals/model_bakeoff.py. Show me the summary table and any rule failures."
 
-You do: read the 40 outputs blind (Claude Code can shuffle them). Pick the model. Record the decision in `docs/decisions.md`. Set the spend caps (Doc 10 §8).
+You do: open the blind review file and rank A to D for each case before opening the key. Apply the decision rules in Doc 15 §7. Record the decision in `docs/decisions.md`. Set the spend caps (Doc 10 §8).
 
 ### Day 19 — Stripe
 You do: Stripe → *Products* → create "Aeris Plus" with two prices: $7.99/month, $49.99/year. Copy the two price IDs. *Developers* → *Webhooks*: Claude Code will give you the endpoint URL to add, and you paste the signing secret into Supabase secrets. Turn on the *Customer Portal* in Stripe settings with "cancel immediately or at period end" allowed.

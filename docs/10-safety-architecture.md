@@ -112,13 +112,15 @@ Aeris can be used alongside.
 
 The `escalate` field in the read schema gives the main model its own way to raise the level if it notices something the classifier missed. Code treats `escalate=true` as Level 2 minimum.
 
+**Wellbeing rules (added 31 October 2026).** Every main-model prompt also carries the eight wellbeing rules in Doc 08 §5 and Doc 15 §6. They are adapted from Anthropic's published claude.ai system prompt. Anthropic's system cards show why they matter: on multi-turn self-harm tests, Opus 5.5, Sonnet 5.5 and Haiku 5.5 score 60–70% appropriate through the raw API and 90–100% with Anthropic's safety prompt. The prompt is the largest single safety lever in the model layer.
+
 ---
 
 ## 6. Layer 6 — output check (code)
 
 Before any AI text is shown, `guards.ts` checks it:
 
-- **Banned phrase list** (regex, case-insensitive): disorder names (GAD, OCD, PTSD, bipolar, depression as a diagnosis, "you have"), medication words (SSRI, benzo, Xanax, dose), "just anxiety", "always here", "24/7", "I promise", "trust me", method words.
+- **Banned phrase list** (regex, case-insensitive, whole words): disorder names (GAD, OCD, PTSD, bipolar, "disorder", "depression", "depressed", "anhedonia", "derealization", "you have [a condition]"), medication words (SSRI, benzo, Xanax, dose, dosage, medication), "just anxiety", "always here", "24/7", "I promise", "trust me", method words, and **self-harm substitution words** ("ice", "ice cube", "rubber band", "cold water"). The last group and the extra clinical terms were added after Anthropic's system cards reported that Opus 5.5 sometimes labels users as depressed and all three models sometimes suggest ice-cube substitutes (Doc 15 §3.2).
 - **Length:** over the limit → truncate at sentence boundary or use stock line.
 - **Schema validity:** every intervention ID must exist and be active.
 - **Disclosure:** if `profiles.last_ai_disclosure_at` is more than 3 hours ago or null, the UI shows the "You're talking with an AI" line and updates the timestamp (New York rule).
@@ -161,7 +163,7 @@ Rules: no swipe-to-dismiss; buttons only; stays until a choice. "Continue" leads
 ### Elevated mode
 - Starts with `check_in`: *"Before we go on: are you safe right now?"* with *Yes* / *Not sure* / *No*.
 - Resources card pinned at bottom for the rest of the session.
-- Gentler read; no `postpone_worry` (it can feel dismissive); no `physical_reset` (no "cold water" suggestions to someone who might self-harm).
+- Gentler read; no `postpone_worry` (it can feel dismissive); no `physical_reset` (even gentle physical prompts are withheld from someone who might self-harm). Cold water has been removed from the library entirely, in every mode, because Anthropic's own wellbeing guidance names "cold water exposure" as a self-harm substitute to avoid.
 - Closing line always includes: *"If this keeps feeling heavy, talking to a person can help. [Resources]"*
 
 ---
