@@ -31,7 +31,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable} bg-background`}>
+    <html lang="en" className={`${inter.variable} ${fraunces.variable} bg-background`} data-scroll-behavior="smooth">
       <body className="font-sans">
         <div className="app-shell">
           {children}

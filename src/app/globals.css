@@ -868,6 +868,7 @@ button:disabled {
 
   .app-shell,
   .aeris-button,
+  .support-button,
   .choice-button,
   .choice-row-item,
   .option-card-trigger,
@@ -876,6 +877,7 @@ button:disabled {
   }
 
   .aeris-button:active,
+  .support-button:active:not(:disabled),
   .choice-button:active,
   .choice-row-item:active,
   .option-card-trigger:active {
@@ -1054,4 +1056,27 @@ button:disabled {
   .help-footer {
     width: min(100% - 64px, 640px);
   }
+}
+
+.reset-main {
+  display: flex;
+  flex-direction: column;
+  padding-top: 16px;
+}
+
+.reset-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reset-topbar .aeris-button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.reset-content {
+  flex: 1;
+  min-height: 1px;
 }
