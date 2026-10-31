@@ -28,6 +28,8 @@ Everything is written so that someone with no coding background can follow it. W
 | 12 | [30-Day Build & Launch Plan](12-thirty-day-plan.md) | Day-by-day what to do, with exact instructions | 30 min |
 | 13 | [v0 Prompts](13-v0-prompts.md) | Copy-and-paste prompts to generate each screen in v0 | Reference |
 | 14 | [LLM Provider & Model Selection](14-llm-provider-and-model-selection.md) | Claude vs OpenAI vs Gemini vs DeepSeek vs Qwen, and reasoning vs standard, for this app | 25 min |
+| 15 | [Most Effective, Most Efficient Model](15-model-deep-dive-effectiveness-efficiency.md) | Opus 5.5 vs Sonnet 5.5 vs Haiku 5.5, grounded in Anthropic's system cards, with corrected costs and test rules | 25 min |
+| — | [evals/](../evals/README.md) | The Day 18 model comparison script | Reference |
 | — | [supabase/schema.sql](../supabase/schema.sql) | The actual database setup file, ready to run | Reference |
 
 ---
@@ -43,7 +45,7 @@ Aeris is a **reasonable product idea in a brutal market**. The idea itself is so
 I have made every routine decision for you in these documents so you can move. These five are yours. Each is explained in the relevant document. You do not need to answer them before reading.
 
 1. **Launch country.** The rules differ a lot between the US, UK, EU, Australia, and elsewhere. I assumed **English-speaking, 18+, starting with one country** and wrote the safety resources for the US, UK, Canada, Australia, Ireland, New Zealand, Hong Kong and Singapore. You must pick one for the first launch. (Doc 03)
-2. **Which AI model tier to use.** I defaulted to Claude Opus 5.5 for the conversation, with a cheaper model for safety screening. Switching to Sonnet 5.5 roughly halves AI cost per session. The numbers are in Doc 11. This is a cost-versus-quality call that is yours.
+2. **Which AI model to use.** After the deep dive in Doc 15, the recommendation is Claude Sonnet 5.5 for every word the user reads and Claude Haiku 5.5 for the safety classifier and background jobs. Opus 5.5 costs twice as much and is only worth it if your Day 18 blind test shows a clear tone win. The decision rules are written down in Doc 15 §7 so the test, not opinion, decides.
 3. **Free tier generosity.** I propose 3 AI-guided sessions per month free, unlimited non-AI calming tools. (Doc 04)
 4. **Whether to spend on a lawyer before launch.** I strongly recommend yes, about US$1,500–5,000. You can launch a closed beta without it, but not a public paid product. (Doc 03)
 5. **Your personal time budget.** The 30-day plan assumes roughly 3–4 hours per day. If you have 1 hour per day, it is a 90-day plan. (Doc 12)

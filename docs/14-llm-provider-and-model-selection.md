@@ -12,7 +12,7 @@
 |---|---|
 | **Which provider for the MVP?** | **Anthropic (Claude)** as the primary, with **OpenAI** wired in as a switchable alternative. Both pass the legal and data tests. Claude has the strongest *published* evidence on the two behaviours that matter most for Aeris: not flattering a distressed user (sycophancy) and handling self-harm conversations carefully. OpenAI's newest small model is the cheapest high-quality option for the "read" step and is the right fallback. |
 | **Reasoning model or standard model?** | **Neither, as a category. In 2026 this is a dial, not a model choice.** Every current model from the three Western providers "thinks" before answering; you control how much with a setting. Aeris should set that dial to **low** for the moment-read and **off or minimal** for the safety classifier, because the user is waiting and the tasks are short. Full details in Section 3. |
-| **Which exact models?** | Safety classifier: **Claude Haiku 5.5**. Moment-read, suggestions, closing line: **Claude Opus 5.5 at low effort** (or **Claude Sonnet 5.5** to halve cost). Weekly reflection: same model via the Batch API at half price. Fallback set: **GPT-6 Luna** (classifier) and **GPT-6.1 Terra** (read). |
+| **Which exact models?** | **Updated after the deep dive in Doc 15.** Safety classifier: **Claude Haiku 5.5**, thinking off. Moment-read, suggestions, closing line: **Claude Sonnet 5.5** at low effort or thinking off. Weekly reflection: Sonnet 5.5 via the Batch API at half price. Opus 5.5 is the upgrade path if the Day 18 blind test shows a clear tone win. Fallback set: **GPT-6 Luna** (classifier) and **GPT-6.1 Terra** (read). |
 | **Gemini?** | Technically good and cheap today, but **Google's own API terms contain a medical-use restriction and a mental-health disclaimer that a lawyer must read before you build on it**, independent research found it the most likely to refuse engagement in distress conversations, and Google has announced that prices double on 1 December 2026 (Argon) and 1 January 2027 (Flash). Viable as a batch or classifier option later; not the right primary for the MVP. |
 | **DeepSeek?** | **No** for a health-adjacent consumer app serving US, UK, or EU users. Its own privacy policy says data is processed and stored in the People's Republic of China and that its services are not designed for sensitive data such as health. The US Department of Homeland Security banned it from federal systems in October 2026. The only legitimate route is the open-weights model hosted by a US or EU company, which trades away most of the price advantage and leaves you with a model that has no published mental-health safety work. |
 | **Qwen?** | **Not for the MVP.** Alibaba's international Model Studio offers Singapore and US (Virginia) regions, which solves the data-location problem on paper, but the Chinese-parent-company perception and regulatory risk is real for a mental-health product, the English-language warmth is untested in this domain, and Alibaba renames and reprices models quarterly. The open-weights Qwen models are a legitimate **cost-at-scale** option in a year, self-hosted or via a US host. |
@@ -73,9 +73,9 @@ Notice cost is only 10%. A founder's instinct is to pick the cheapest model. For
 
 | Model | Input | Output | Cache read | Role in Aeris |
 |---|---|---|---|---|
-| Claude Opus 5.5 | $4.00 | $20.00 | $0.20 | Default for read / suggest / close / weekly |
-| Claude Sonnet 5.5 | $2.00 | $10.00 | $0.20 | The cost-saving alternative for the same steps |
-| Claude Haiku 5.5 | $0.10 | $0.50 | — | Safety classifier, nightly tag extraction |
+| Claude Opus 5.5 | $4.00 | $20.00 | $0.20 | Upgrade path for the read step (Doc 15 §7) |
+| Claude Sonnet 5.5 | $2.00 | $10.00 | $0.10 | **Default** for read / suggest / close / weekly (Doc 15) |
+| Claude Haiku 5.5 | $0.10 | $0.50 | $0.01 | Safety classifier, nightly tag extraction |
 | Claude Fable 5.1 | $10.00 | $50.00 | $0.25 | Not needed. Also requires 30-day retention and is not available under zero data retention |
 
 **Data handling (from Anthropic's privacy centre, updated 1 July 2026):** API inputs and outputs are deleted within 30 days; not used for training; zero-data-retention agreements are available (negotiated, typically for larger customers); a Data Processing Addendum is published. Flagged policy violations may be kept longer. Standard and acceptable for Aeris.
@@ -92,8 +92,9 @@ Notice cost is only 10%. A founder's instinct is to pick the cheapest model. For
 
 **Where Claude is not the best choice:**
 - **Price.** Opus 5.5 is 4× the input price of GPT-6.1 Terra and 2.7× Gemini 3.8 Flash's introductory price. Sonnet 5.5 narrows but does not close the gap.
-- **Over-refusal risk.** Anthropic's safety classifiers can decline requests that look like self-harm content even when the user is simply describing their state. The fallback feature mitigates this but you must still handle the `refusal` stop reason with a warm retry (Doc 08 §11). Test this on Day 17 with the Level-2 examples.
-- **Thinking cannot be fully disabled** on Opus 5.5 and Sonnet 5.5, so there is a small latency floor. Low effort keeps it under the 1.5-second target in practice, but measure.
+- **Over-refusal risk (checked in Doc 15, and smaller than this document first suggested).** Anthropic's blocking classifiers on all three current models target biology, cyber, AI development, weapons, and model copying, not mental-health text, and benign over-refusal on the self-harm tests was 0–0.04%. Still handle the `refusal` stop reason with a warm retry (Doc 08 §11).
+- **Raw-API safety on long conversations is weak for every model.** Anthropic's system cards report 60–70% appropriate responses on multi-turn self-harm tests without a system prompt, rising to 90–100% with one. Aeris's system prompt carries the weight (Doc 15 §6).
+- **Thinking cannot be disabled on Opus 5.5**, so it has a latency floor and an official speed label of "Moderate". Sonnet 5.5 ("Fast") can turn thinking off with `between_tools`, and Haiku 5.5 ("Fastest") with `disabled`.
 
 **Fit score: 4.6 / 5.**
 
@@ -230,8 +231,8 @@ Using the token profile from Doc 11 (read 700 fresh + 3,000 cached input, 450 ou
 
 | Configuration (read model + classifier) | Raw per session | Planning figure (×2.5) | Per user / month at 12 sessions | 1,000 active users / month |
 |---|---|---|---|---|
-| Claude Opus 5.5 + Haiku 5.5 | $0.019 | **$0.05** | $0.60 | $600 |
-| Claude Sonnet 5.5 + Haiku 5.5 | $0.010 | **$0.025** | $0.30 | $300 |
+| Claude Opus 5.5 + Haiku 5.5 | $0.019 | **$0.05** | $0.56 | $560 (up to $1,000 with cold caches; Doc 15 §5) |
+| Claude Sonnet 5.5 + Haiku 5.5 (recommended) | $0.0095 | **$0.024** | $0.28 | $280 (up to $500 with cold caches) |
 | GPT-6.1 Sol + GPT-6 Luna | $0.010 | **$0.025** | $0.30 | $300 |
 | GPT-6.1 Terra + GPT-6 Luna | $0.005 | **$0.013** | $0.16 | $160 |
 | Gemini 4 Argon + Flash-Lite (until 30 Nov) | $0.010 | $0.025 | $0.30 | $300 → **$600 from 1 Dec** |
@@ -250,13 +251,13 @@ Using the token profile from Doc 11 (read 700 fresh + 3,000 cached input, 450 ou
 | Step | Model | Settings |
 |---|---|---|
 | Keyword pre-check | none (code) | — |
-| Safety classifier | **Claude Haiku 5.5** | thinking off, structured output, 256 max tokens, 2.5 s timeout → fail to Level 2 |
-| Read the moment | **Claude Opus 5.5** | effort **low**, structured output, streaming, prompt caching, server-side fallbacks on, 600 max tokens |
-| Worry-sort suggestions, closing line | **Claude Opus 5.5** | effort low, 120–200 max tokens |
+| Safety classifier | **Claude Haiku 5.5** | thinking disabled, effort low, structured output, 512 max tokens, 2.5 s timeout → fail to Level 2 |
+| Read the moment | **Claude Sonnet 5.5** | effort **low** (test thinking off on Day 18), structured output, streaming, prompt caching, server-side fallbacks on, 1,000 max tokens |
+| Worry-sort suggestions, closing line | **Claude Sonnet 5.5** | thinking off (`between_tools`), 400 max tokens |
 | Nightly tag extraction | **Claude Haiku 5.5** | batch API |
-| Weekly reflection | **Claude Opus 5.5** | effort medium, Batch API (50% off) |
+| Weekly reflection | **Claude Sonnet 5.5** | effort medium, Batch API (50% off); Opus 5.5 via batch if reflections read flat |
 
-If the Day-18 blind test shows Sonnet 5.5 reads as well as Opus for your prompts, switch the three live steps to Sonnet 5.5 and halve the cost. One environment variable.
+This stack was revised from Opus to Sonnet after the deep dive in Doc 15. If the Day 18 blind test shows Opus 5.5 clearly writes better for your prompts (Doc 15 §7, rule 3), switch the read step to Opus. One environment variable.
 
 ### Secondary stack (wire it in from Day 15, keep it dormant)
 

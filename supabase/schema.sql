@@ -398,7 +398,7 @@ insert into public.interventions (id, name, fits, duration_sec, steps) values
  ('postpone_worry','Postpone the worry',   'late-night rumination, checking loops',      60,  '[]'),
  ('self_compassion','A kinder voice',      'self-criticism, shame',                      120, '[]'),
  ('muscle_release','Release tension',      'physical tension',                           180, '[]'),
- ('physical_reset','Physical reset',       'stuck arousal (cold water, movement)',       60,  '[]'),
+ ('physical_reset','Physical reset',       'stuck arousal (gentle movement, change of room)', 60,  '[]'),
  ('next_smallest_step','Next smallest step','overwhelm, avoidance',                      120, '[]'),
  ('body_scan',   'Body scan',              'late night, winding down',                   180, '[]'),
  ('sleep_wind_down','Wind down',           'late-night loop ending',                     180, '[]'),

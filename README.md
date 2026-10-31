@@ -22,6 +22,7 @@ Read [`docs/00-START-HERE.md`](docs/00-START-HERE.md). It indexes the full produ
 12. 30-day build & launch plan
 13. v0 prompts (copy and paste)
 14. LLM provider & model selection (Claude vs OpenAI vs Gemini vs DeepSeek vs Qwen)
+15. Most effective, most efficient model (Opus 5.5 vs Sonnet 5.5 vs Haiku 5.5), with the Day 18 test script in `evals/`
 
 ## Stack (planned)
 
