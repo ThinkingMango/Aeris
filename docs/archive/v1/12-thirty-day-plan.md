@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 12 — 30-Day Build & Launch Plan
 
 **How this plan works.** Each day has: a goal, what *you* do (step by step), what you ask *Claude Code* or *v0* to do (with the exact words), and a "done when" check. Days are ~3.5 hours. Weekends are included; if you need days off, the plan becomes 36–40 days, which is fine.

@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 07 — MVP Screens & Calming Design System
 
 Two parts: **Part A** is the design system (colours, type, motion, the rules that make Aeris feel calm). **Part B** is every MVP screen, what is on it, and the exact words. Doc 13 turns these into copy-and-paste v0 prompts.

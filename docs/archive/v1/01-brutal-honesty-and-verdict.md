@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 01 — Brutal Honesty & Verdict
 
 You asked me to challenge your ideas. This document does that. It is not a list of reasons not to build Aeris. It is a list of the things that will actually kill it, so you can decide with open eyes and design around them.

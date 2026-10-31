@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 14 — Which LLM Provider and Which Models Fit Aeris
 
 **Written:** 31 October 2026. Prices and model names were checked against the providers' own pricing and terms pages on this date, except where marked "third-party figure." These change often; re-check before you sign up.

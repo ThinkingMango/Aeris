@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "properties": {
+    "reflection": {
+      "type": "string"
+    },
+    "proposal": {
+      "type": "string"
+    },
+    "plan": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "long_exhale_breathing",
+          "grounding_54321",
+          "sort_and_step"
+        ]
+      }
+    },
+    "worry_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalate": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "reflection",
+    "proposal",
+    "plan",
+    "worry_items",
+    "escalate"
+  ],
+  "additionalProperties": false
+}

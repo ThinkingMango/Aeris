@@ -1,0 +1,13 @@
+{
+  "name": "aeris",
+  "private": true,
+  "type": "module",
+  "description": "Aeris discovery pilot. See docs/00-START-HERE.md.",
+  "engines": { "node": ">=22.6" },
+  "scripts": {
+    "test:safety": "node --experimental-strip-types --no-warnings --test src/safety/controller.test.ts",
+    "test:db": "bash supabase/tests/run_local.sh",
+    "test:db:mutations": "bash supabase/tests/mutation_check.sh",
+    "test": "npm run test:safety && npm run test:db"
+  }
+}

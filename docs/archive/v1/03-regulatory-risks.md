@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 03 — Regulatory Risks
 
 **Plain-English summary first:** You are allowed to build a wellness app that helps people feel calmer. You are not allowed to build, or *sound like you are building*, a therapist, a doctor, or a treatment. The line between those two is mostly about (1) the words you use, (2) how you handle crisis, (3) how you handle data, and (4) in some places, specific disclosures. This document tells you where the line is in 2026 and how to stay on the safe side.

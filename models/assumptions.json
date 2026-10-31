@@ -1,0 +1,40 @@
+{
+  "_read_me": "Every number here is an ASSUMPTION unless a source is given. Sources are in docs/02 (evidence register). Change these, rerun `python3 models/cohort_model.py`, and the tables in docs/11 regenerate. Replace assumptions with pilot data as soon as you have it.",
+  "months": 24,
+  "scenarios": {
+    "low":  {"signups_per_month": 150,  "activation": 0.45, "paid_conversion_of_activated": 0.015},
+    "base": {"signups_per_month": 400,  "activation": 0.55, "paid_conversion_of_activated": 0.03},
+    "high": {"signups_per_month": 1500, "activation": 0.65, "paid_conversion_of_activated": 0.05}
+  },
+  "_conversion_note": "RevenueCat reports a 2.9% median download-to-paid rate for Health & Fitness app-store apps (2026 report, secondary summary, E-BIZ-01). Aeris is a web app with no app-store discovery or trial UI, so 3% of ACTIVATED users is optimistic, not conservative.",
+  "conversion_timing_by_month_since_signup": [0.6, 0.3, 0.1],
+  "free_active_share_by_month_since_signup": [1.0, 0.30, 0.20, 0.15],
+  "free_active_monthly_decay_after": 0.85,
+  "_retention_note": "Assumption. Baumel 2019 (E-RET-01) measured exact-day opens, a different metric, and cannot be plugged in here.",
+  "plan_mix_annual": 0.6,
+  "price_monthly_usd": 7.99,
+  "price_annual_usd": 49.99,
+  "monthly_plan_churn": 0.12,
+  "annual_renewal_rate": 0.35,
+  "refund_rate_first_payment": 0.04,
+  "card_fee_pct": 0.029,
+  "card_fee_fixed_usd": 0.30,
+  "stripe_billing_pct": 0.007,
+  "international_share": 0.2,
+  "international_surcharge_pct": 0.015,
+  "_fee_note": "Stripe Billing 0.7% of billing volume confirmed on stripe.com/pricing 2026-10-31 (E-BIZ-03). Card fee is Stripe's long-standing US standard; confirm for your country. Sales tax / VAT not modelled.",
+  "ai_cost_per_session_usd": 0.03,
+  "_ai_note": "Planning figure between warm ($0.024) and cold ($0.042) cache for Sonnet 5.5 read + Haiku 5.5 screen, from docs/15 v1 arithmetic with 2026-10-31 prices (E-AI-01). Includes the classifier on every text input.",
+  "free_sessions_cap_per_month": 3,
+  "free_sessions_mean_when_active": 1.5,
+  "paid_active_share": 0.7,
+  "paid_sessions_median": 4,
+  "paid_sessions_p90": 15,
+  "paid_fair_use_cap_per_month": 60,
+  "fixed_costs_monthly_usd": {
+    "supabase_pro": 25, "vercel_pro": 20, "domain": 1.25, "email": 20, "claude_code_pro": 20,
+    "qualified_reviewer_retainer": 400, "insurance": 150, "bookkeeping": 50
+  },
+  "founder_hours_per_month": 40,
+  "founder_hourly_value_usd": 30
+}

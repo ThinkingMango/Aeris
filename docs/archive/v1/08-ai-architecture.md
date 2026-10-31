@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 08 — AI Architecture
 
 **Plain-English summary:** Aeris does *not* send the user's words to an AI and show whatever comes back. That is a chatbot, and it is slow, unsafe, and generic. Instead, Aeris runs a short **pipeline** (a series of small, specific steps). The AI is used only where it adds something: understanding the situation, choosing the intervention, personalizing a few sentences, and later extracting the pattern. The exercises themselves are **scripted screens**, not AI improvisation.

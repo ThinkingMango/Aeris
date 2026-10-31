@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 04 — Monetization
 
 **Plain-English summary:** Aeris should be **freemium with a subscription**, sold on the web through Stripe, with a generous free tier and an aggressively priced annual plan. The numbers below show why, and show honestly how slow it will be.

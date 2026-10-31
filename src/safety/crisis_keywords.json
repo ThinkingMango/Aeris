@@ -1,0 +1,18 @@
+{
+  "_status": "SEED LIST written by the founder's AI assistant on 2026-10-31. Not clinically validated. Must be reviewed and extended by a qualified reviewer before any real user sees the product (docs/07 section 6). Phrases are matched as whole words after normalization (lowercase, straight apostrophes removed, punctuation to spaces).",
+  "self_harm_plan_or_intent": [
+    "kill myself", "end my life", "take my own life", "going to end it", "suicide plan", "plan to die",
+    "hang myself", "slit my wrists", "jump off a bridge", "kill myself tonight"
+  ],
+  "self_harm_ideation": [
+    "want to die", "wish i was dead", "wish i were dead", "dont want to be alive", "do not want to be alive",
+    "no reason to live", "better off dead", "suicidal", "suicide", "end it all", "not want to live"
+  ],
+  "self_harm_in_progress": ["i just cut myself", "i am cutting myself", "im cutting myself", "bleeding a lot"],
+  "overdose_or_poisoning": ["overdose", "overdosed", "took all my pills", "took too many pills", "swallowed pills"],
+  "medical_emergency": ["cant breathe", "can not breathe", "cannot breathe", "lips are blue", "passing out", "crushing chest pain"],
+  "harm_to_others": ["kill him", "kill her", "kill them", "hurt someone", "going to hurt him", "going to hurt her"],
+  "abuse_or_unsafe_home": ["he hits me", "she hits me", "scared to go home", "hurt me if i tell", "threatened to kill me"],
+  "minor": ["im 13", "im 14", "im 15", "im 16", "im 17", "i am 15", "i am 16", "i am 17", "my parents wont let me", "in year 9", "in 9th grade"],
+  "physical_symptoms": ["chest pain", "chest is tight", "heart is pounding", "numb arm", "arm feels numb", "dizzy", "faint", "worst headache"]
+}
