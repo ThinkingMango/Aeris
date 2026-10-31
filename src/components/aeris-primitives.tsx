@@ -31,11 +31,27 @@ export function GhostButton({
   );
 }
 
-export function TextLink({ href, children }: { href: string; children: ReactNode }) {
+export function TextLink({
+  href,
+  onClick,
+  children,
+}: {
+  href?: string;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  if (href) {
+    return (
+      <Link className="aeris-text-link" href={href} prefetch={false}>
+        {children}
+      </Link>
+    );
+  }
+
   return (
-    <Link className="aeris-text-link" href={href} prefetch={false}>
+    <button type="button" className="aeris-text-link" onClick={onClick}>
       {children}
-    </Link>
+    </button>
   );
 }
 
