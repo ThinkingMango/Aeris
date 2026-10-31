@@ -119,6 +119,16 @@ button:disabled {
   transition: background-color 300ms ease-out, color 300ms ease-out;
 }
 
+.app-shell-header {
+  display: flex;
+  width: min(100% - 32px, 640px);
+  min-height: 64px;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0 auto;
+  padding-block: 4px;
+}
+
 .site-header {
   display: flex;
   min-height: 72px;
@@ -187,7 +197,7 @@ button:disabled {
 
 .appearance-options {
   position: absolute;
-  z-index: 2;
+  z-index: 20;
   top: calc(100% + 8px);
   right: 0;
   display: grid;
@@ -1118,8 +1128,13 @@ button:disabled {
 }
 
 @media (min-width: 640px) {
-  .app-main {
+  .app-shell-header,
+  .app-main,
+  .help-footer {
     width: min(100% - 64px, 640px);
+  }
+
+  .app-main {
     padding-top: 56px;
   }
 

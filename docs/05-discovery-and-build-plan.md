@@ -50,8 +50,8 @@ D1 interviews and D2 partner conversations ([04](04-hypotheses-and-experiments.m
 ## Stage 2 — Advantage and the first funnel (weeks 3–4)
 
 1. Run the founder's competitor benchmark (half a day).
-2. **Revise the draft content** in `src/content/reset_content.json` using the words D1 interviewees actually used: the cards, steps and openers. Rerun `npm run test:safety`, which checks the content.
-3. Build the **clickable no-typing prototype** in v0 from [12](12-v0-prompts.md) (P0, R0–R4, R6). It is static: nothing is stored, nothing is sent. Push v0's code to a branch, not `main`, and have Claude Code review it against [06](06-pilot-product-spec.md) Part A.
+2. **Revise the draft content** in `content/reset_content.json` using the words D1 interviewees actually used: the cards, steps and openers. Rerun `npm run test:safety`, which checks the content.
+3. Build the **clickable no-typing prototype** in v0 from [12](12-v0-prompts.md) (P0, R0–R4, R6). It sends nothing. The chosen step is stored on-device only if the person chooses Save; all other choices stay in memory. Push v0's code to a branch, not `main`, and have Claude Code review it against [06](06-pilot-product-spec.md) Part A.
 4. **Before the first D3 session**, replace every placeholder help-line number and link with your pilot country's real ones, verified on each service's own website. The prototype will not dial a placeholder.
 5. Run D3: prototype versus each person's preferred alternative.
 6. Build the landing page (R5) and run D4 with one partner. It collects email addresses, so publish the short privacy page first and collect nothing else. The lawyer reviews it in Stage 3.

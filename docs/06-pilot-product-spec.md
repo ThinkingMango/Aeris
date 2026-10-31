@@ -25,7 +25,7 @@ Everything not listed here is out of scope until its gate passes.
    - **Stage 2 (prototype):** nothing at all is sent anywhere.
    - **Stage 3 (pilot members):** only the conversation type, whether the reset was completed, and the optional rating are recorded, linked to the member's pilot account, because D5 measures reuse per person. That is **not anonymous**, and the screen says so (A1).
    - Card choices, the chosen step and the opener never leave the phone.
-   - **All wording comes from one file**, `src/content/reset_content.json`. It is checked by `src/content/content.test.ts`: every type has content, lengths are checked, and there are no banned words or crisis language.
+   - **All card, step and opener wording comes from one file**, `content/reset_content.json`. It is checked by `src/content/content.test.ts`: every type has content, lengths are checked, and there are no banned words or crisis language.
 2. **Lead with the useful output**: sort what you control, then choose a first step. Breathing is optional, offered, never forced.
 3. **Help before an account.** Anyone can use it as a guest. Pilot members may add an email to receive one weekly question.
 4. **User in control.** Every screen can be skipped. "Stop" is always visible. "Something else" is always available.
@@ -44,7 +44,7 @@ A1 Home: "A difficult conversation ahead?"  [Start the 3-minute reset]   (link: 
         [How they'll react] [Saying it badly] [Not sure what I want] [It feels unfair] [What it means for my job]
  ─► A4 Sort: "Which of these can you control?"  pre-written cards for that conversation type, tap to sort
         into "Mine" / "Not mine"
- ─► A5 One first step: choose one of 3 reviewed options for that conversation type (src/content/reset_content.json),
+ ─► A5 One first step: choose one of 3 reviewed options for that conversation type (content/reset_content.json),
         always starting with "Choose your first sentence" (3 opener templates to pick from), e.g. for
         feedback: "Pick your one example", "Decide what you'd like to happen next"
  ─► (optional) A6b one minute of long-exhale breathing
