@@ -51,7 +51,7 @@ Recruit first among newly promoted managers, reached through trainers and profes
 | 4 | **Free text and AI carry most of the risk and cost.** They need crisis screening, a 200-case independent evaluation, provider retention disclosures, and Illinois legal review. A no-typing tool needs none of that to test demand | E-SAF-01, E-SAF-05, E-REG-02, E-SEC-05 |
 | 5 | **The law is broad where AI reflects feelings.** Illinois defines "therapeutic communication" in words close to an AI reflection. California allows individual lawsuits at $1,000 or more per violation | E-REG-02, E-REG-03 |
 | 6 | **Acquisition and retention decide the business, not AI cost.** About $0.015 a session for AI, against $1.06 of value per signup | E-BIZ-03; [11](11-economics.md) |
-| 7 | **Passing tests is not the same as being right.** Each review found problems that every existing test had missed. The code now passes 65 safety tests, 71 database checks under both Supabase defaults with 11 of 11 planted holes caught, 120 of 120 parity checks and 17 harness tests. Each fix names its test | [03](03-review-log.md) Parts E–F |
+| 7 | **Passing tests is not the same as being right.** Each review found problems that every existing test had missed. The code now passes 65 safety-controller tests, 71 database checks under both Supabase defaults with 11 of 11 planted holes caught, 120 of 120 parity checks and 17 harness tests. Each fix names its test | [03](03-review-log.md) Parts E–F |
 | 8 | **Our own earlier figures were too rosy.** Examples: "646 signups to break even" without saying it takes six years; "3% conversion is optimistic" from a benchmark with a different denominator; "free" competitors that now charge | [03](03-review-log.md) Part F |
 
 ## What you must decide now (founder decisions)
@@ -66,7 +66,7 @@ Recruit first among newly promoted managers, reached through trainers and profes
 | Asset | Check it yourself |
 |---|---|
 | Pilot database schema covering three things: enrolment and versioned consent; reviewer approval tied to content version; AI off by default, separate AI budgets and aggregate-only deleted safety data | `npm run test:db` (71 checks × 2 Supabase defaults); `npm run test:db:mutations` (11 of 11 planted holes caught) |
-| Safety controller and output validation, for Stage 5 | `npm run test:safety` (65 tests) |
+| Safety controller and output validation (for Stage 5), plus checks on the reset's draft content (Stages 2–4) | `npm run test:safety` (92 tests: 65 controller, 27 content) |
 | Classifier evaluation with exact statistics and exact-route scoring | `python3 evals/classifier_eval.py --parity` (120/120) |
 | Model comparison harness, offline-tested, timing approval on cold calls | `python3 evals/tests/test_bakeoff_offline.py` (17 tests) |
 | Cohort economics: break-even, months to break even, revenue targets, three business models | `python3 models/cohort_model.py` |
