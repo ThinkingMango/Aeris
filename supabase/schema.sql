@@ -1,406 +1,466 @@
 -- =====================================================================
--- Aeris — initial database schema (Supabase / Postgres)
--- Version: 0001_init
--- Run this in the Supabase SQL editor, or save as
--- supabase/migrations/0001_init.sql and run `supabase db push`.
+-- Aeris pilot schema, version 2 (2026-10-31)
 --
--- Design rules (see docs/09-database-design.md):
---  * Every user-owned table has Row Level Security (RLS) ON and policies
---    that compare user_id to auth.uid(). Users can only see their own rows.
---  * Service-role (server) code bypasses RLS; the browser never has that key.
---  * Minimal data. We store structured records first, free text second,
---    and never anything we do not need.
---  * Deletion cascades from auth.users, so deleting the auth user deletes
---    everything.
+-- Scope: the discovery pilot in docs/05. It stores only structured,
+-- non-narrative data on the server. Free text (worries, notes, anything
+-- the user types) stays on the user's device in the pilot.
+--
+-- Security model (see docs/08 for the full role x object x operation matrix):
+--   * Nothing is reachable through the Data API unless granted below.
+--     This matches Supabase's 2026 default ("tables not exposed
+--     automatically") and also undoes the older default that exposed
+--     every public table to anon and authenticated.
+--   * Users get column-level grants only, never table-wide UPDATE, so a
+--     user cannot write server-owned columns such as arm or safety_route.
+--   * Child rows reference (session_id, user_id) together, so a child
+--     row can only point at a session owned by the same user. Foreign
+--     key checks bypass row level security, so ownership must be part
+--     of the key itself.
+--   * Privileged functions live in the app_private schema, which the
+--     Data API does not expose, and only service_role may run them.
+--     Postgres lets PUBLIC execute every new function by default; that
+--     default is revoked below, per Supabase's database-functions guide.
+--   * Consent records are append-only for users: insert and read, never
+--     update or delete.
+--   * AI quota and spend are reserved atomically before any model call.
+--
+-- Revised 2026-10-31 after red-team review: enrolment by invite only;
+-- sessions require recorded consent and a country; inactive (unreviewed)
+-- exercises cannot be logged; reviewer sign-off must be real; AI budget
+-- is enforced at reservation and settles may exceed estimates; classifier
+-- and generator calls have separate limits; Illinois participants are
+-- held on the scripted arm; a global kill switch exists.
+--
+-- Tested by supabase/tests/run_security_tests.py (run: npm run test:db),
+-- with a mutation check (npm run test:db:mutations).
 -- =====================================================================
 
-create extension if not exists "pgcrypto";
+-- gen_random_uuid() is built into PostgreSQL 13+, so no extension is installed.
+-- (Installing pgcrypto into public would expose ~35 functions to every caller.)
 
 -- ---------------------------------------------------------------------
--- Enums (fixed lists of allowed values)
+-- 0. Default privileges: deny by default, grant explicitly below.
 -- ---------------------------------------------------------------------
-create type plan_tier as enum ('free', 'plus');
-create type session_status as enum ('started', 'reading', 'intervening', 'rated', 'completed', 'abandoned', 'crisis_exit');
-create type situation_chip as enum ('tomorrow', 'conversation', 'body', 'money', 'someone', 'unknown', 'other');
-create type pattern_key as enum (
-  'waiting_for_tomorrow', 'replaying_conversation', 'body_first', 'waiting_for_news',
-  'too_much_at_once', 'checking_loop', 'late_night_loop', 'someone_i_love', 'money', 'unnamed'
+alter default privileges revoke execute on functions from public;
+alter default privileges in schema public revoke execute on functions from anon, authenticated;
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
+
+create schema if not exists app_private;
+revoke all on schema app_private from public, anon, authenticated;
+grant usage on schema app_private to service_role;
+
+-- ---------------------------------------------------------------------
+-- 1. Types
+-- ---------------------------------------------------------------------
+create type public.app_situation as enum ('work_tomorrow', 'work_replay', 'work_too_much', 'work_other');
+create type public.app_arm as enum ('scripted', 'ai');
+
+-- ---------------------------------------------------------------------
+-- 2. Server-only tables (app_private)
+-- ---------------------------------------------------------------------
+
+-- Crossover assignment: each participant uses one arm for period_days,
+-- then the other. Written only by the signup trigger.
+-- Invite list: only these email addresses are enrolled at signup.
+create table app_private.invites (
+  email      text primary key check (email = lower(email) and position('@' in email) > 1),
+  invited_at timestamptz not null default now()
 );
-create type safety_level as enum ('0', '1', '2', '3');
-create type sort_zone as enum ('mine', 'not_mine', 'not_today');
+
+create table app_private.assignments (
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  first_arm    public.app_arm not null,
+  arm_override public.app_arm,   -- set by the region rule (Illinois -> scripted)
+  period_days smallint not null default 14 check (period_days between 1 and 60),
+  enrolled_at timestamptz not null default now()
+);
+
+-- Operational settings, one row.
+create table app_private.settings (
+  id                             boolean primary key default true check (id),
+  per_user_daily_generate_calls  int not null default 12  check (per_user_daily_generate_calls between 0 and 1000),
+  per_user_daily_classify_calls  int not null default 300 check (per_user_daily_classify_calls between 0 and 10000),
+  daily_generate_budget_usd      numeric(12,6) not null default 5.00 check (daily_generate_budget_usd >= 0),
+  daily_classify_budget_usd      numeric(12,6) not null default 5.00 check (daily_classify_budget_usd >= 0),
+  max_single_call_usd            numeric(12,6) not null default 0.25 check (max_single_call_usd > 0),
+  -- Kill switch read by every server function: when true, the controller is
+  -- run with globalRestricted and no generated text is shown to anyone.
+  global_restricted              boolean not null default false
+);
+insert into app_private.settings default values;
+
+-- Daily AI budget ledger, one row per day and call kind. The cap is enforced
+-- when reserving. Settling records the REAL cost even if it exceeds the cap,
+-- so the ledger never under-reports spend; new reservations are then refused.
+create table app_private.daily_budget (
+  day          date not null,
+  kind         text not null check (kind in ('classify', 'generate')),
+  cap_usd      numeric(12,6) not null,
+  reserved_usd numeric(12,6) not null default 0 check (reserved_usd >= 0),
+  spent_usd    numeric(12,6) not null default 0 check (spent_usd >= 0),
+  primary key (day, kind)
+);
+
+create table app_private.ai_reservations (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id) on delete set null,
+  day         date not null,
+  kind        text not null check (kind in ('classify', 'generate')),
+  est_usd     numeric(12,6) not null check (est_usd > 0),
+  actual_usd  numeric(12,6) check (actual_usd >= 0),
+  status      text not null default 'reserved' check (status in ('reserved', 'settled', 'released', 'expired')),
+  created_at  timestamptz not null default now(),
+  settled_at  timestamptz
+);
+create index on app_private.ai_reservations (user_id, day, kind);
+
+-- Safety events: no text, no hash of text. user_id is kept only so a
+-- reviewer can follow the duty-of-care protocol in docs/07; it becomes
+-- null when the account is deleted, leaving an anonymous count.
+create table app_private.safety_events (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id) on delete set null,
+  occurred_at timestamptz not null default now(),
+  route       text not null check (char_length(route) <= 40),
+  categories  text[] not null default '{}',
+  source      text not null check (source in ('keyword', 'classifier', 'classifier_failure', 'model_escalate', 'user_report')),
+  arm         public.app_arm,
+  reviewed_at timestamptz
+);
+
+-- Proof that deletions were honoured. Deliberately holds no identifier.
+create table app_private.deletion_log (
+  id           uuid primary key default gen_random_uuid(),
+  requested_at timestamptz not null,
+  completed_at timestamptz not null default now()
+);
+
+grant select, insert, update, delete on all tables in schema app_private to service_role;
 
 -- ---------------------------------------------------------------------
--- profiles: one row per user. Created automatically on signup (trigger).
+-- 3. User-facing tables (public)
 -- ---------------------------------------------------------------------
+
+-- The exercise library. Inactive until a qualified reviewer signs off.
+create table public.exercises (
+  id           text primary key check (id ~ '^[a-z0-9_]{3,40}$'),
+  name         text not null check (char_length(name) <= 60),
+  duration_sec int  not null check (duration_sec between 30 and 600),
+  version      int  not null default 1,
+  reviewed_by  text,
+  reviewed_at  date,
+  is_active    boolean not null default false,
+  check (not is_active or (char_length(btrim(coalesce(reviewed_by, ''))) >= 3 and reviewed_at >= date '2026-01-01'))
+);
+insert into public.exercises (id, name, duration_sec) values
+  ('long_exhale_breathing', 'Long-exhale breathing', 120),
+  ('grounding_54321',       'Grounding 5-4-3-2-1',   120),
+  ('sort_and_step',         'Sort it, then one step', 180);
+
 create table public.profiles (
-  user_id            uuid primary key references auth.users(id) on delete cascade,
-  preferred_name     text check (char_length(preferred_name) <= 40),
-  country_code       char(2) not null default 'US',          -- drives crisis lines
-  timezone           text not null default 'UTC',
-  plan               plan_tier not null default 'free',
-  plan_renews_at     timestamptz,
-  stripe_customer_id text unique,
-  checkin_time       time,                                   -- null = daily check-in off
-  reduce_motion      boolean not null default false,
-  sounds_enabled     boolean not null default false,
-  theme              text not null default 'auto' check (theme in ('auto','light','dark')),
-  personalization    jsonb not null default '{}'::jsonb,     -- computed weekly (Doc 08 §8)
-  last_ai_disclosure_at timestamptz,                         -- for the 3-hour reminder rule
-  created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now()
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  country_code char(2) check (country_code ~ '^[A-Z]{2}$'),            -- required before a session; no default, so crisis lines are never guessed
+  region       text check (region ~ '^[A-Z]{2}-[A-Z0-9]{1,3}$'),       -- ISO 3166-2, e.g. US-IL; drives the Illinois rule
+  timezone     text not null default 'UTC' check (char_length(timezone) <= 64),
+  created_at   timestamptz not null default now()
 );
 
--- ---------------------------------------------------------------------
--- consents: an audit trail of what the user agreed to and when.
--- Never updated in place; a new row is added for each change.
--- ---------------------------------------------------------------------
 create table public.consents (
-  id             uuid primary key default gen_random_uuid(),
-  user_id        uuid not null references auth.users(id) on delete cascade,
-  consent_type   text not null check (consent_type in ('terms','privacy','health_data','age_18_plus','email_reflections')),
-  version        text not null,                              -- e.g. '2026-11-01'
-  granted        boolean not null,
-  granted_at     timestamptz not null default now(),
-  ip_hash        text                                        -- hashed, never raw IP
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  consent_type  text not null check (consent_type in ('terms', 'privacy', 'pilot_participation', 'age_18_plus', 'research_contact')),
+  version       text not null check (char_length(version) between 1 and 32),
+  granted       boolean not null,
+  recorded_at   timestamptz not null default now()
 );
-create index on public.consents (user_id, consent_type, granted_at desc);
+create index on public.consents (user_id, consent_type, recorded_at desc);
 
--- ---------------------------------------------------------------------
--- interventions: the scripted library. Public read. Edited by you only.
--- ---------------------------------------------------------------------
-create table public.interventions (
-  id            text primary key,                            -- 'worry_sort', 'breathe_90', ...
-  name          text not null,
-  fits          text not null,                               -- when to use, for the prompt
-  duration_sec  int not null,
-  steps         jsonb not null,                              -- screen sequence (Doc 08 §6)
-  is_active     boolean not null default true,
-  version       int not null default 1,
-  updated_at    timestamptz not null default now()
-);
-
--- ---------------------------------------------------------------------
--- sessions: one row per "Moment". The heart of the data model.
--- ---------------------------------------------------------------------
 create table public.sessions (
-  id                 uuid primary key default gen_random_uuid(),
-  user_id            uuid not null references auth.users(id) on delete cascade,
-  status             session_status not null default 'started',
-  started_at         timestamptz not null default now(),
-  completed_at       timestamptz,
-  local_hour         smallint check (local_hour between 0 and 23),
-  local_weekday      smallint check (local_weekday between 0 and 6),
-  chip               situation_chip not null,
-  user_text          text check (char_length(user_text) <= 1000),  -- optional free text
-  tension_before     smallint check (tension_before between 0 and 10),
-  tension_after      smallint check (tension_after between 0 and 10),
-  pattern            pattern_key,
-  ai_reflection      text,
-  ai_proposal        text,
-  plan               text[] ,                                 -- intervention ids in order
-  closing_line       text,
-  next_step          text check (char_length(next_step) <= 200),
-  user_note          text check (char_length(user_note) <= 500),
-  helped             boolean,                                -- thumbs up/down
-  helped_reason      text,
-  safety_level       safety_level not null default '0',
-  elevated           boolean not null default false,
-  prompt_version     text,
-  model_read         text,                                   -- e.g. 'claude-opus-5-5'
-  ai_cost_usd        numeric(8,5) not null default 0,        -- summed from usage
-  is_guest           boolean not null default false
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  arm            public.app_arm not null,
+  situation      public.app_situation not null,
+  tension_before smallint check (tension_before between 0 and 10),   -- optional; there is no after-score (docs/06 section 3)
+  completed      boolean not null default false,
+  started_at     timestamptz not null default now(),
+  completed_at   timestamptz,
+  safety_route   text check (char_length(safety_route) <= 40),
+  unique (id, user_id)
 );
 create index on public.sessions (user_id, started_at desc);
-create index on public.sessions (user_id, pattern);
 
--- ---------------------------------------------------------------------
--- intervention_runs: each intervention step actually run inside a session.
--- ---------------------------------------------------------------------
-create table public.intervention_runs (
-  id               uuid primary key default gen_random_uuid(),
-  session_id       uuid not null references public.sessions(id) on delete cascade,
-  user_id          uuid not null references auth.users(id) on delete cascade,
-  intervention_id  text not null references public.interventions(id),
-  position         smallint not null,
-  started_at       timestamptz not null default now(),
-  ended_at         timestamptz,
-  completed        boolean not null default false,
-  swapped_out      boolean not null default false             -- user tapped "try something else"
-);
-create index on public.intervention_runs (user_id, intervention_id);
-
--- ---------------------------------------------------------------------
--- worry_items: the worry-sort board contents.
--- ---------------------------------------------------------------------
-create table public.worry_items (
+create table public.exercise_runs (
   id          uuid primary key default gen_random_uuid(),
-  session_id  uuid not null references public.sessions(id) on delete cascade,
-  user_id     uuid not null references auth.users(id) on delete cascade,
-  text        text not null check (char_length(text) <= 140),
-  zone        sort_zone,
-  is_top_step boolean not null default false,
-  created_at  timestamptz not null default now()
+  session_id  uuid not null,
+  user_id     uuid not null default auth.uid(),
+  exercise_id text not null references public.exercises(id),
+  position    smallint not null check (position between 1 and 5),
+  started_at  timestamptz not null default now(),
+  completed   boolean not null default false,
+  foreign key (session_id, user_id) references public.sessions(id, user_id) on delete cascade
+);
+
+create table public.feedback (
+  session_id      uuid primary key,
+  user_id         uuid not null default auth.uid(),
+  helpful         smallint check (helpful between 1 and 5),
+  would_use_again boolean,
+  check (helpful is not null or would_use_again is not null),
+  created_at      timestamptz not null default now(),
+  foreign key (session_id, user_id) references public.sessions(id, user_id) on delete cascade
 );
 
 -- ---------------------------------------------------------------------
--- session_triggers: short tags extracted nightly (Doc 08 §8).
+-- 4. Explicit grants. Anything not listed here is denied.
 -- ---------------------------------------------------------------------
-create table public.session_triggers (
-  session_id  uuid not null references public.sessions(id) on delete cascade,
-  user_id     uuid not null references auth.users(id) on delete cascade,
-  tag         text not null check (char_length(tag) <= 40),
-  source      text not null default 'ai' check (source in ('chip','ai','user')),
-  primary key (session_id, tag)
-);
-create index on public.session_triggers (user_id, tag);
+revoke all on public.exercises, public.profiles, public.consents, public.sessions,
+              public.exercise_runs, public.feedback from anon, authenticated;
+
+grant select on public.exercises to anon, authenticated;
+
+grant select on public.profiles to authenticated;
+grant update (country_code, region, timezone) on public.profiles to authenticated;
+
+grant select on public.consents to authenticated;
+grant insert (consent_type, version, granted) on public.consents to authenticated;
+
+grant select on public.sessions to authenticated;
+grant insert (situation, tension_before) on public.sessions to authenticated;
+grant update (completed) on public.sessions to authenticated;
+
+grant select on public.exercise_runs to authenticated;
+grant insert (session_id, exercise_id, position) on public.exercise_runs to authenticated;
+grant update (completed) on public.exercise_runs to authenticated;
+
+grant select on public.feedback to authenticated;
+grant insert (session_id, helpful, would_use_again) on public.feedback to authenticated;
+
+grant select, insert, update, delete on public.exercises, public.profiles, public.consents,
+      public.sessions, public.exercise_runs, public.feedback to service_role;
 
 -- ---------------------------------------------------------------------
--- checkins: the 10-second daily check-in (no AI).
+-- 5. Row level security
 -- ---------------------------------------------------------------------
-create table public.checkins (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users(id) on delete cascade,
-  at          timestamptz not null default now(),
-  local_hour  smallint,
-  local_weekday smallint,
-  tension     smallint not null check (tension between 0 and 10),
-  chip        situation_chip
-);
-create index on public.checkins (user_id, at desc);
+alter table public.exercises     enable row level security;
+alter table public.profiles      enable row level security;
+alter table public.consents      enable row level security;
+alter table public.sessions      enable row level security;
+alter table public.exercise_runs enable row level security;
+alter table public.feedback      enable row level security;
+
+create policy exercises_read on public.exercises for select to anon, authenticated using (is_active);
+
+create policy profiles_read   on public.profiles for select to authenticated using (user_id = auth.uid());
+create policy profiles_update on public.profiles for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy consents_read   on public.consents for select to authenticated using (user_id = auth.uid());
+create policy consents_insert on public.consents for insert to authenticated with check (user_id = auth.uid());
+
+create policy sessions_read   on public.sessions for select to authenticated using (user_id = auth.uid());
+create policy sessions_insert on public.sessions for insert to authenticated with check (user_id = auth.uid());
+create policy sessions_update on public.sessions for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy runs_read   on public.exercise_runs for select to authenticated using (user_id = auth.uid());
+create policy runs_insert on public.exercise_runs for insert to authenticated with check (user_id = auth.uid());
+create policy runs_update on public.exercise_runs for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy feedback_read   on public.feedback for select to authenticated using (user_id = auth.uid());
+create policy feedback_insert on public.feedback for insert to authenticated with check (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
--- reflections: weekly AI reflections (Plus).
+-- 6. Functions. All privileged logic is in app_private, service_role only.
 -- ---------------------------------------------------------------------
-create table public.reflections (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users(id) on delete cascade,
-  week_start  date not null,
-  body        text not null,
-  suggestion  text,
-  prompt_version text,
-  created_at  timestamptz not null default now(),
-  unique (user_id, week_start)
-);
 
--- ---------------------------------------------------------------------
--- safety_events: minimal record of flagged inputs. No full transcript.
--- ---------------------------------------------------------------------
-create table public.safety_events (
-  id             uuid primary key default gen_random_uuid(),
-  user_id        uuid references auth.users(id) on delete set null,   -- keep event even if user deletes
-  session_id     uuid references public.sessions(id) on delete set null,
-  level          safety_level not null,
-  signals        text[] not null default '{}',
-  excerpt_hash   text,                                      -- hash of the triggering text, not the text
-  excerpt        text check (char_length(excerpt) <= 300),  -- short excerpt, purged after 90 days
-  action_taken   text not null,                             -- 'crisis_screen','elevated_mode','minor_exit','physical_notice'
-  user_continued boolean,
-  reviewed_at    timestamptz,
-  reviewer_note  text,
-  created_at     timestamptz not null default now()
-);
-create index on public.safety_events (created_at desc);
+create function app_private.current_arm(p_user uuid) returns public.app_arm
+language sql stable security definer set search_path = '' as $$
+  select case
+    when a.user_id is null then null
+    when a.arm_override is not null then a.arm_override
+    when now() < a.enrolled_at + make_interval(days => a.period_days) then a.first_arm
+    when a.first_arm = 'scripted' then 'ai'::public.app_arm
+    else 'scripted'::public.app_arm
+  end
+  from app_private.assignments a where a.user_id = p_user;
+$$;
 
--- ---------------------------------------------------------------------
--- usage: monthly counters for free-tier limits and rate limits.
--- ---------------------------------------------------------------------
-create table public.usage_monthly (
-  user_id       uuid not null references auth.users(id) on delete cascade,
-  month         date not null,                              -- first day of month
-  ai_sessions   int not null default 0,
-  ai_cost_usd   numeric(8,4) not null default 0,
-  primary key (user_id, month)
-);
-
--- ---------------------------------------------------------------------
--- subscriptions: mirror of Stripe state (written only by the webhook).
--- ---------------------------------------------------------------------
-create table public.subscriptions (
-  id                     text primary key,                  -- Stripe subscription id
-  user_id                uuid not null references auth.users(id) on delete cascade,
-  status                 text not null,                     -- active, trialing, past_due, canceled...
-  price_id               text not null,
-  interval               text not null check (interval in ('month','year')),
-  current_period_end     timestamptz not null,
-  cancel_at_period_end   boolean not null default false,
-  updated_at             timestamptz not null default now()
-);
-create index on public.subscriptions (user_id);
-
--- ---------------------------------------------------------------------
--- deletion_requests: GDPR/MHMDA trail. Row survives the user's deletion.
--- ---------------------------------------------------------------------
-create table public.deletion_requests (
-  id            uuid primary key default gen_random_uuid(),
-  user_id_hash  text not null,                              -- hash of the uuid, not the uuid
-  requested_at  timestamptz not null default now(),
-  completed_at  timestamptz
-);
-
--- ---------------------------------------------------------------------
--- ai_calls: per-call cost ledger (no content). For the admin view.
--- ---------------------------------------------------------------------
-create table public.ai_calls (
-  id              bigserial primary key,
-  user_id         uuid references auth.users(id) on delete set null,
-  session_id      uuid references public.sessions(id) on delete set null,
-  step            text not null,                            -- 'safety','read','suggest','close','tags','reflection'
-  model           text not null,
-  input_tokens    int not null,
-  cached_tokens   int not null default 0,
-  output_tokens   int not null,
-  cost_usd        numeric(8,5) not null,
-  latency_ms      int,
-  stop_reason     text,
-  created_at      timestamptz not null default now()
-);
-create index on public.ai_calls (created_at desc);
-
--- =====================================================================
--- Row Level Security
--- =====================================================================
-alter table public.profiles          enable row level security;
-alter table public.consents          enable row level security;
-alter table public.interventions     enable row level security;
-alter table public.sessions          enable row level security;
-alter table public.intervention_runs enable row level security;
-alter table public.worry_items       enable row level security;
-alter table public.session_triggers  enable row level security;
-alter table public.checkins          enable row level security;
-alter table public.reflections       enable row level security;
-alter table public.safety_events     enable row level security;
-alter table public.usage_monthly     enable row level security;
-alter table public.subscriptions     enable row level security;
-alter table public.deletion_requests enable row level security;
-alter table public.ai_calls          enable row level security;
-
--- Users: full access to their own rows on user-owned tables.
-create policy "own profile"      on public.profiles          for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own consents"     on public.consents          for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own sessions"     on public.sessions          for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own runs"         on public.intervention_runs for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own worries"      on public.worry_items       for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own triggers"     on public.session_triggers  for select using (auth.uid() = user_id);
-create policy "own checkins"     on public.checkins          for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own reflections"  on public.reflections       for select using (auth.uid() = user_id);
-create policy "own usage"        on public.usage_monthly     for select using (auth.uid() = user_id);
-create policy "own subscription" on public.subscriptions     for select using (auth.uid() = user_id);
-
--- Library is readable by everyone (including guests), writable by nobody via the API.
-create policy "read library"     on public.interventions     for select using (is_active);
-
--- safety_events, deletion_requests, ai_calls: NO user policies.
--- Only the service role (server-side Edge Functions) can read or write them.
-
--- A user may never change their own plan or stripe id from the browser.
-revoke update (plan, plan_renews_at, stripe_customer_id, personalization) on public.profiles from authenticated;
-
--- =====================================================================
--- Triggers & helpers
--- =====================================================================
-
--- Create a profile row when a user signs up.
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public as $$
+-- Signup: always create a profile; enrol (assign an arm) ONLY if invited.
+-- Uninvited accounts can exist but cannot start sessions (my_arm is null).
+create function app_private.handle_new_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.profiles (user_id) values (new.id);
+  if exists (select 1 from app_private.invites i where i.email = lower(new.email)) then
+    insert into app_private.assignments (user_id, first_arm)
+      values (new.id, case when random() < 0.5 then 'scripted'::public.app_arm else 'ai'::public.app_arm end);
+  end if;
   return new;
 end; $$;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
 
--- Keep updated_at fresh.
-create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
-begin new.updated_at = now(); return new; end; $$;
-create trigger profiles_touch before update on public.profiles for each row execute procedure public.touch_updated_at();
-
--- Monthly free-tier gate, called by the Edge Function before an AI session.
--- Returns true if the user may start an AI session.
-create or replace function public.can_start_ai_session(p_user uuid, p_free_limit int default 3)
-returns boolean language plpgsql security definer set search_path = public as $$
-declare v_plan plan_tier; v_count int;
+-- Region rule: participants in Illinois stay on the scripted arm (docs/10 section 3).
+create function app_private.profiles_region_rule() returns trigger
+language plpgsql security definer set search_path = '' as $$
 begin
-  select plan into v_plan from public.profiles where user_id = p_user;
-  if v_plan = 'plus' then return true; end if;
-  select coalesce(ai_sessions,0) into v_count
-    from public.usage_monthly
-    where user_id = p_user and month = date_trunc('month', now())::date;
-  return coalesce(v_count,0) < p_free_limit;
+  update app_private.assignments
+     set arm_override = case when new.region = 'US-IL' then 'scripted'::public.app_arm else null end
+   where user_id = new.user_id;
+  return new;
 end; $$;
+create trigger profiles_region_rule after insert or update of region on public.profiles
+  for each row execute function app_private.profiles_region_rule();
 
--- Increment usage (server-side only).
-create or replace function public.bump_ai_session(p_user uuid, p_cost numeric)
-returns void language plpgsql security definer set search_path = public as $$
+-- True only if the user's LATEST answer to each required consent is 'granted'.
+create function app_private.has_required_consents(p_user uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select count(*) = 4 from (
+    select distinct on (c.consent_type) c.consent_type, c.granted
+    from public.consents c
+    where c.user_id = p_user and c.consent_type in ('terms', 'privacy', 'pilot_participation', 'age_18_plus')
+    order by c.consent_type, c.recorded_at desc, c.id desc
+  ) latest where latest.granted;
+$$;
+create trigger on_auth_user_created after insert on auth.users
+  for each row execute function app_private.handle_new_user();
+
+-- Session insert: the server decides the arm and the timestamps.
+create function app_private.sessions_before_insert() returns trigger
+language plpgsql security definer set search_path = '' as $$
 begin
-  insert into public.usage_monthly (user_id, month, ai_sessions, ai_cost_usd)
-  values (p_user, date_trunc('month', now())::date, 1, p_cost)
-  on conflict (user_id, month) do update
-    set ai_sessions = usage_monthly.ai_sessions + 1,
-        ai_cost_usd = usage_monthly.ai_cost_usd + excluded.ai_cost_usd;
+  new.arm := app_private.current_arm(new.user_id);
+  if new.arm is null then raise exception 'user is not enrolled in the pilot'; end if;
+  if not app_private.has_required_consents(new.user_id) then raise exception 'required consent missing or withdrawn'; end if;
+  if (select p.country_code from public.profiles p where p.user_id = new.user_id) is null then
+    raise exception 'country required before a session (it sets the crisis lines)';
+  end if;
+  new.started_at := now();
+  new.completed_at := null;
+  new.safety_route := null;
+  return new;
 end; $$;
+create trigger sessions_before_insert before insert on public.sessions
+  for each row execute function app_private.sessions_before_insert();
 
--- Per-user personalization (computed weekly by a scheduled function; also callable ad hoc).
-create or replace function public.compute_personalization(p_user uuid)
-returns jsonb language sql security definer set search_path = public as $$
-  with deltas as (
-    select ir.intervention_id,
-           avg(s.tension_before - s.tension_after) as avg_delta,
-           count(*) as n
-    from public.intervention_runs ir
-    join public.sessions s on s.id = ir.session_id
-    where ir.user_id = p_user and ir.completed and s.tension_after is not null
-    group by ir.intervention_id
-  ),
-  recent as (
-    select array_agg(pattern order by started_at desc) as patterns
-    from (select pattern, started_at from public.sessions
-          where user_id = p_user and pattern is not null
-          order by started_at desc limit 5) r
-  )
-  select jsonb_build_object(
-    'helped_before', (select jsonb_object_agg(intervention_id, round(avg_delta,1)) from deltas where n >= 2),
-    'recent_patterns', (select to_jsonb(patterns) from recent),
-    'computed_at', now()
-  );
+-- Session update: completion time is set by the server, once.
+create function app_private.sessions_before_update() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.completed and not old.completed then new.completed_at := now(); end if;
+  if old.completed and not new.completed then raise exception 'a completed session cannot be reopened'; end if;
+  return new;
+end; $$;
+create trigger sessions_before_update before update on public.sessions
+  for each row execute function app_private.sessions_before_update();
+
+-- Exercise runs: only reviewed, active exercises may be logged.
+create function app_private.runs_before_insert() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from public.exercises e where e.id = new.exercise_id and e.is_active) then
+    raise exception 'exercise % is not active (no reviewer sign-off)', new.exercise_id;
+  end if;
+  new.started_at := now();
+  return new;
+end; $$;
+create trigger runs_before_insert before insert on public.exercise_runs
+  for each row execute function app_private.runs_before_insert();
+
+-- The one function users may call: their own current arm. No parameters.
+create function public.my_arm() returns public.app_arm
+language sql stable security definer set search_path = '' as $$
+  select app_private.current_arm(auth.uid());
 $$;
 
--- Admin dashboard view (read via service role only).
-create or replace view public.admin_daily as
-select
-  date_trunc('day', started_at)::date as day,
-  count(*) filter (where not is_guest)                               as sessions,
-  count(*) filter (where status = 'completed')                       as completed,
-  percentile_cont(0.5) within group (order by tension_before - tension_after)
-      filter (where tension_after is not null)                       as median_delta,
-  count(*) filter (where safety_level = '3')                         as crisis_exits,
-  round(sum(ai_cost_usd)::numeric, 2)                                as ai_cost_usd
-from public.sessions
-group by 1 order by 1 desc;
+-- Reserve AI quota and budget BEFORE calling a model. Returns null when the
+-- user's daily limit or that kind's daily budget would be exceeded. The
+-- FOR UPDATE lock on the day's budget row serializes concurrent reservations.
+-- Do not hold this transaction open during the model call: reserve, commit,
+-- call the model, then settle (real cost) or release (model never called).
+-- Classifier calls have their own, larger limits so that a busy generator
+-- budget never stops safety screening.
+create function app_private.reserve_ai_call(p_user uuid, p_kind text, p_est_usd numeric) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_day date := (now() at time zone 'utc')::date;
+  v_s app_private.settings%rowtype;
+  v_b app_private.daily_budget%rowtype;
+  v_used int;
+  v_limit int;
+  v_cap numeric;
+  v_id uuid;
+begin
+  select * into v_s from app_private.settings;
+  if p_user is null or p_kind not in ('classify', 'generate') or p_est_usd is null
+     or p_est_usd <= 0 or p_est_usd > v_s.max_single_call_usd then
+    raise exception 'invalid reservation request';
+  end if;
+  v_cap   := case p_kind when 'classify' then v_s.daily_classify_budget_usd else v_s.daily_generate_budget_usd end;
+  v_limit := case p_kind when 'classify' then v_s.per_user_daily_classify_calls else v_s.per_user_daily_generate_calls end;
+  insert into app_private.daily_budget (day, kind, cap_usd) values (v_day, p_kind, v_cap) on conflict (day, kind) do nothing;
+  select * into v_b from app_private.daily_budget where day = v_day and kind = p_kind for update;
+  select count(*) into v_used from app_private.ai_reservations
+    where user_id = p_user and day = v_day and kind = p_kind and status <> 'released';
+  if v_used >= v_limit then return null; end if;
+  if v_b.reserved_usd + v_b.spent_usd + p_est_usd > v_b.cap_usd then return null; end if;
+  update app_private.daily_budget set reserved_usd = reserved_usd + p_est_usd where day = v_day and kind = p_kind;
+  insert into app_private.ai_reservations (user_id, day, kind, est_usd) values (p_user, v_day, p_kind, p_est_usd)
+    returning id into v_id;
+  return v_id;
+end; $$;
 
--- Purge old safety excerpts (run by a scheduled function; keeps the hash and level).
-create or replace function public.purge_safety_excerpts()
-returns void language sql security definer set search_path = public as $$
-  update public.safety_events set excerpt = null
-  where excerpt is not null and created_at < now() - interval '90 days';
+-- Settle with the REAL cost, even if above the estimate or the cap. Idempotent.
+create function app_private.settle_ai_call(p_id uuid, p_actual_usd numeric) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare v_r app_private.ai_reservations%rowtype;
+begin
+  if p_actual_usd is null or p_actual_usd < 0 then raise exception 'invalid cost'; end if;
+  select * into v_r from app_private.ai_reservations where id = p_id for update;
+  if not found or v_r.status <> 'reserved' then return false; end if;
+  perform 1 from app_private.daily_budget where day = v_r.day and kind = v_r.kind for update;
+  update app_private.daily_budget
+     set reserved_usd = greatest(0, reserved_usd - v_r.est_usd), spent_usd = spent_usd + p_actual_usd
+   where day = v_r.day and kind = v_r.kind;
+  update app_private.ai_reservations set status = 'settled', actual_usd = p_actual_usd, settled_at = now() where id = p_id;
+  return true;
+end; $$;
+
+-- Release only when the model was NEVER called. Idempotent.
+create function app_private.release_ai_call(p_id uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare v_r app_private.ai_reservations%rowtype;
+begin
+  select * into v_r from app_private.ai_reservations where id = p_id for update;
+  if not found or v_r.status <> 'reserved' then return false; end if;
+  perform 1 from app_private.daily_budget where day = v_r.day and kind = v_r.kind for update;
+  update app_private.daily_budget set reserved_usd = greatest(0, reserved_usd - v_r.est_usd) where day = v_r.day and kind = v_r.kind;
+  update app_private.ai_reservations set status = 'released', settled_at = now() where id = p_id;
+  return true;
+end; $$;
+
+-- Reservations left open by a crashed call are charged at their estimate,
+-- because the model may have run. Run every few minutes from a scheduler.
+create function app_private.expire_stale_reservations(p_older_than interval default '10 minutes') returns int
+language plpgsql security definer set search_path = '' as $$
+declare v_r record; v_n int := 0;
+begin
+  for v_r in select id from app_private.ai_reservations
+             where status = 'reserved' and created_at < now() - p_older_than for update skip locked loop
+    perform app_private.settle_ai_call(v_r.id, (select est_usd from app_private.ai_reservations where id = v_r.id));
+    update app_private.ai_reservations set status = 'expired' where id = v_r.id;
+    v_n := v_n + 1;
+  end loop;
+  return v_n;
+end; $$;
+
+-- Pilot metrics for the private admin page (server-side only).
+create function app_private.pilot_metrics(p_since date default (now() - interval '30 days')::date)
+returns table (day date, arm public.app_arm, sessions bigint, completed bigint, participants bigint)
+language sql stable security definer set search_path = '' as $$
+  select s.started_at::date, s.arm, count(*), count(*) filter (where s.completed), count(distinct s.user_id)
+  from public.sessions s where s.started_at >= p_since group by 1, 2 order by 1, 2;
 $$;
 
--- Seed the intervention library (names/fits only; steps are filled by the app's seed script).
-insert into public.interventions (id, name, fits, duration_sec, steps) values
- ('breathe_60',  'Breathe (1 min)',        'body activation, racing heart, short reset', 60,  '[]'),
- ('breathe_90',  'Breathe (90 s)',         'body activation, racing heart',              90,  '[]'),
- ('breathe_180', 'Breathe (3 min)',        'strong body activation, before sleep',       180, '[]'),
- ('grounding',   'Ground (5-4-3-2-1)',     'dissociation, "I don''t know", panic edge',  120, '[]'),
- ('name_it',     'Name it',                'diffuse fear, replaying',                    60,  '[]'),
- ('worry_sort',  'Sort what''s yours',     'anticipatory, control confusion, money, someone I love', 180, '[]'),
- ('worst_best_likely','Worst, best, likely','catastrophizing a specific event',          120, '[]'),
- ('postpone_worry','Postpone the worry',   'late-night rumination, checking loops',      60,  '[]'),
- ('self_compassion','A kinder voice',      'self-criticism, shame',                      120, '[]'),
- ('muscle_release','Release tension',      'physical tension',                           180, '[]'),
- ('physical_reset','Physical reset',       'stuck arousal (gentle movement, change of room)', 60,  '[]'),
- ('next_smallest_step','Next smallest step','overwhelm, avoidance',                      120, '[]'),
- ('body_scan',   'Body scan',              'late night, winding down',                   180, '[]'),
- ('sleep_wind_down','Wind down',           'late-night loop ending',                     180, '[]'),
- ('check_in',    'Check in',               'safety step (elevated mode)',                60,  '[]'),
- ('physical_notice','Physical symptoms notice','safety step (physical symptoms)',        15,  '[]');
+-- Execute rights: explicit and minimal.
+revoke execute on all functions in schema app_private from public, anon, authenticated;
+grant execute on all functions in schema app_private to service_role;
+revoke execute on function public.my_arm() from public, anon;
+grant execute on function public.my_arm() to authenticated, service_role;

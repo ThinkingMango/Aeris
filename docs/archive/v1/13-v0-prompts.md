@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 13 — v0 Prompts (copy and paste)
 
 **How to use:** In v0.app, create one project called "Aeris." Paste **P0** first and iterate until the design system feels right. Then, for each screen, paste its prompt. Every screen prompt starts with the same first line so v0 reuses the design system. After each screen looks right, export to the codebase and let Claude Code wire the data.

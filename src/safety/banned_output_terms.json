@@ -1,0 +1,13 @@
+{
+  "_status": "Terms that must never appear in any user-visible generated text (reflection, proposal, worry_items, suggestions, closing). Whole words or phrases after the same normalisation as crisis_keywords.json. Shared by src/safety/controller.ts and evals/safety_text.py. Sources: docs/02 E-SAF-01, E-SAF-02 (Anthropic system cards; published claude.ai wellbeing prompt), and the language rules in docs/10 section 5. Revised 2026-10-31 after red-team review.",
+  "diagnosis_and_clinical": [
+    "disorder", "disorders", "diagnosis", "diagnose", "diagnosed", "gad", "ocd", "ptsd", "bipolar", "depression",
+    "depressed", "anhedonia", "derealization", "panic disorder", "panic attack", "panic attacks", "anxiety", "trauma",
+    "traumatic", "symptom", "symptoms", "patient", "clinical", "clinically", "therapy", "therapist", "treatment",
+    "treat", "treats", "treating", "cure", "cures", "curing", "heal", "heals", "proven"
+  ],
+  "medication": ["medication", "medications", "dose", "dosage", "ssri", "ssris", "benzo", "benzos", "xanax", "prescription", "pills"],
+  "self_harm_substitutes": ["ice", "ice cube", "ice cubes", "rubber band", "rubber bands", "hair tie", "snap", "snapping",
+                            "cold water", "cold shower", "sour candy", "lemon", "pinch", "pinching"],
+  "dismissive_or_overpromising": ["just anxiety", "always here", "24/7", "i promise", "trust me", "nothing to worry about", "calm down", "guarantee"]
+}

@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 11 — Estimated Development & API Costs
 
 All figures in US dollars, October 2026. Where a price depends on a plan that changed recently (v0 renamed its tiers in July 2026 and is sunsetting its $20 plan), I note it; **check the pricing page on the day you sign up.**

@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 09 — Database Design
 
 **Plain-English summary:** The database is a set of tables (like spreadsheets) in Supabase, which is a hosted Postgres database with login, file storage, and small server programs built in. The design has three goals, in order: (1) a user can only ever see their own data, (2) we store as little as possible, (3) the data is shaped so that "patterns over time" is a simple query, not a research project.

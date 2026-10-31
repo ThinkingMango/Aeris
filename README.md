@@ -1,29 +1,35 @@
 # Aeris
 
-A quiet AI guide for anxious moments. Consumer wellness web app (PWA). Not a therapist, doctor, or emergency service.
+A proposed stress-management tool for stressful moments at work, and the plan to find out whether it should exist.
 
-**Status:** planning. No application code yet.
+**Status (31 October 2026):** discovery phase. No product has been released. The plan was rewritten after an independent review (version 1 is archived), then revised again after an adversarial review of version 2. Every finding and its disposition is in [`docs/03-review-log.md`](docs/03-review-log.md).
 
-## Start here
+**Start here:** [`docs/00-START-HERE.md`](docs/00-START-HERE.md)
 
-Read [`docs/00-START-HERE.md`](docs/00-START-HERE.md). It indexes the full product deep dive:
+## What is in this repository
 
-1. Brutal honesty & verdict
-2. Customer pain points
-3. Regulatory risks
-4. Monetization
-5. Differentiation
-6. Core features
-7. MVP screens & calming design system
-8. AI architecture
-9. Database design (runnable schema in `supabase/schema.sql`)
-10. Safety architecture
-11. Costs
-12. 30-day build & launch plan
-13. v0 prompts (copy and paste)
-14. LLM provider & model selection (Claude vs OpenAI vs Gemini vs DeepSeek vs Qwen)
-15. Most effective, most efficient model (Opus 5.5 vs Sonnet 5.5 vs Haiku 5.5), with the Day 18 test script in `evals/`
+| Path | Contents |
+|---|---|
+| `docs/` | The plan: decision memo, evidence register, review log, experiments, safety, privacy, AI, law, economics |
+| `supabase/schema.sql` | Pilot database schema with explicit permissions |
+| `supabase/tests/` | Security tests run against a throwaway PostgreSQL 16, plus a mutation check |
+| `src/safety/` | Deterministic safety controller and its tests; shared keyword and banned-term lists |
+| `src/ai/` | The AI arm's prompt and output schema, shared by production and tests |
+| `evals/` | Classifier evaluation, model bake-off, exact statistics |
+| `models/` | Cohort economics model and its assumptions |
 
-## Stack (planned)
+## Run the checks
 
-Next.js PWA on Vercel · Supabase (Postgres, Auth, Edge Functions) · Claude (Anthropic API) via server-side Edge Functions · Stripe · Resend · screens generated with v0.app, everything else built with Claude Code.
+```bash
+npm test
+```
+
+```bash
+npm run test:db:mutations
+```
+
+```bash
+python3 evals/classifier_eval.py --parity
+```
+
+Aeris is a stress-management tool, not therapy, medical care, or an emergency service.

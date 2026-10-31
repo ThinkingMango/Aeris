@@ -1,3 +1,5 @@
+> **SUPERSEDED (31 October 2026).** This is version 1 of the plan, kept for the record. It contains known errors and overclaims, listed with their corrections in [docs/03-review-log.md](../../03-review-log.md). Do not build from this file. The current plan starts at [docs/00-START-HERE.md](../../00-START-HERE.md).
+
 # 10 — Safety Architecture
 
 **Plain-English summary:** Safety is not one feature. It is eleven layers, each catching what the previous one missed. No single layer is perfect; together they make a serious failure very unlikely. This document is also the basis for the public "Our safety approach" page that California-style laws ask you to publish.

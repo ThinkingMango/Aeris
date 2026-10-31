@@ -1,51 +1,68 @@
-# Aeris Product Deep Dive — Start Here
+# Aeris — Start Here (version 2, 31 October 2026)
 
-**Written:** 30 October 2026
-**For:** Lawrence (founder, non-coder)
-**Status:** Planning. Nothing has been built yet. No code exists in this repository except these documents.
+**Aeris** is a proposed stress-management tool for stressful moments at work. This repository holds the plan to find out, cheaply and safely, whether it should exist.
 
----
+**Version 1 is archived** in [archive/v1](archive/v1/). It was challenged by an independent review and found overconfident, inconsistent and in places unsafe. Do not build from version 1.
 
-## How to read this
-
-These documents are long on purpose. You asked for a brutally honest, end-to-end deep dive. Read them in order the first time. After that, jump to whichever one you need.
-
-Everything is written so that someone with no coding background can follow it. When a technical word appears, it is explained the first time it is used.
-
-| # | Document | What it answers | Read time |
-|---|----------|-----------------|-----------|
-| 01 | [Brutal Honesty & Verdict](01-brutal-honesty-and-verdict.md) | Should you build this at all? What will kill it? | 15 min |
-| 02 | [Customer Pain Points](02-customer-pain-points.md) | Who hurts, how, and what they actually want | 15 min |
-| 03 | [Regulatory Risks](03-regulatory-risks.md) | What the law says about AI + anxiety apps in 2026 | 20 min |
-| 04 | [Monetization](04-monetization.md) | How it makes money, with real numbers | 15 min |
-| 05 | [Differentiation](05-differentiation.md) | Why anyone would pick Aeris over ChatGPT or Calm | 10 min |
-| 06 | [Core Features](06-core-features.md) | The complete feature list, split into MVP / later | 15 min |
-| 07 | [MVP Screens & Calming UI](07-mvp-screens-and-design.md) | Every screen, what is on it, and the design system | 25 min |
-| 08 | [AI Architecture](08-ai-architecture.md) | How the AI actually works, step by step | 25 min |
-| 09 | [Database Design](09-database-design.md) | What data you store and how it is protected | 20 min |
-| 10 | [Safety Architecture](10-safety-architecture.md) | How you keep users safe and yourself out of court | 25 min |
-| 11 | [Costs](11-costs.md) | Development, tools, and AI costs with worked examples | 15 min |
-| 12 | [30-Day Build & Launch Plan](12-thirty-day-plan.md) | Day-by-day what to do, with exact instructions | 30 min |
-| 13 | [v0 Prompts](13-v0-prompts.md) | Copy-and-paste prompts to generate each screen in v0 | Reference |
-| 14 | [LLM Provider & Model Selection](14-llm-provider-and-model-selection.md) | Claude vs OpenAI vs Gemini vs DeepSeek vs Qwen, and reasoning vs standard, for this app | 25 min |
-| 15 | [Most Effective, Most Efficient Model](15-model-deep-dive-effectiveness-efficiency.md) | Opus 5.5 vs Sonnet 5.5 vs Haiku 5.5, grounded in Anthropic's system cards, with corrected costs and test rules | 25 min |
-| — | [evals/](../evals/README.md) | The Day 18 model comparison script | Reference |
-| — | [supabase/schema.sql](../supabase/schema.sql) | The actual database setup file, ready to run | Reference |
+**Version 2 has been attacked too.** An adversarial review of the first v2 draft found 21 more problems. Four were critical: a crisis route could be lowered by one tap; ordinary work sentences ended sessions; the evaluation scored the wrong crisis screen as correct; and the break-even figure contradicted its own model. All are fixed, and each fix names a test. Every finding, correction and remaining dispute is in the [review log](03-review-log.md), Parts A to E, including two of our own corrections that turned out to be wrong.
 
 ---
 
-## The one-paragraph verdict
+## Read in this order
 
-Aeris is a **reasonable product idea in a brutal market**. The idea itself is sound: people in an anxious moment need one right next step, not a library. The problems are not the idea. The problems are (1) nobody opens an app when they are anxious unless the app has already become a habit, (2) your real competitor is free ChatGPT, which people already use for exactly this, (3) the law around AI and mental health tightened sharply in 2025–2026 and you would be the least-protected party in the room, and (4) wellness apps lose roughly 97 of every 100 users within a month. **My recommendation is to build it, but build it small, cheap, and de-risked, and treat the first 30 days as an experiment with hard pass/fail gates, not a launch of a business.** Document 01 explains each of these points and the gates.
+| # | Document | Answers | Read time |
+|---|---|---|---|
+| 01 | [Decision memo](01-decision-memo.md) | What we are doing, why, and what would make us stop | 5 min |
+| 02 | [Evidence register](02-evidence-register.md) | Every factual claim, its source, what it supports **and what it does not** | Reference |
+| 03 | [Review log](03-review-log.md) | Every challenge received and what happened to it | 10 min |
+| 04 | [Hypotheses and experiments](04-hypotheses-and-experiments.md) | The six guesses the business rests on, and the tests with pass/fail rules set in advance | 15 min |
+| 05 | [Discovery and build plan](05-discovery-and-build-plan.md) | About 20 weeks, phase by phase, with gates, budget ($8,300–19,200) and hours | 10 min |
+| 06 | [Pilot product spec](06-pilot-product-spec.md) | One situation, three exercises, two arms, about 12 screens, accessible colours | 10 min |
+| 07 | [Safety spec](07-safety-spec.md) | Routes, precedence, screening, evaluation sizes, pilot monitoring, honest limits | 15 min |
+| 08 | [Data, privacy and security](08-data-privacy-security.md) | Data map, permission matrix, tests, deletion, incident response | 10 min |
+| 09 | [AI and models](09-ai-and-models.md) | AI as a hypothesis; candidates; selection rules fixed in advance; cost | 10 min |
+| 10 | [Law and regulation](10-regulatory.md) | What the statutes say, how they might apply, questions for a lawyer | 15 min |
+| 11 | [Economics](11-economics.md) | Cohort model; the number that decides viability (signups per month) | 10 min |
+| 12 | [v0 prompts](12-v0-prompts.md) | Copy-and-paste prompts for the prototype | Reference |
+| — | [decisions.md](decisions.md) | Decisions as they are made, with dates and evidence | Living |
 
----
+## Verify instead of trusting
 
-## The 5 decisions only you can make
+Everything checkable is checkable with one command. Node 22.6+, Python 3.10+, and the PostgreSQL 16 server binaries are needed for the database tests.
 
-I have made every routine decision for you in these documents so you can move. These five are yours. Each is explained in the relevant document. You do not need to answer them before reading.
+| Claim | Command | Expected |
+|---|---|---|
+| The safety controller behaves as specified, including every red-team probe | `npm run test:safety` | 58 passing |
+| The database blocks every attack from both reviews, under both Supabase defaults | `npm run test:db` | ALL TESTS PASSED (60 checks × 2) |
+| Those database tests are not vacuous | `npm run test:db:mutations` | 7 of 7 planted holes caught |
+| Python and TypeScript apply identical text, validation and routing rules | `python3 evals/classifier_eval.py --parity` | 101/101 agree |
+| A keyword list alone is not a safety net | `python3 evals/classifier_eval.py --screen keyword` | Held-out crisis 4/8 exact (and contaminated; see E-SAF-05) |
+| Exact statistics behind the evaluation and pilot sizes | `python3 evals/stats.py` | 0/15 → 18.1%; n ≥ 59 for <5%; crossover needs 27/40 |
+| The model harness rejects bad output and times visible text | `python3 evals/tests/test_bakeoff_offline.py` | 11 PASS, ALL PASSED |
+| The economics tables | `python3 models/cohort_model.py` | Matches [11](11-economics.md): 646 signups/month, $1.09 per signup |
 
-1. **Launch country.** The rules differ a lot between the US, UK, EU, Australia, and elsewhere. I assumed **English-speaking, 18+, starting with one country** and wrote the safety resources for the US, UK, Canada, Australia, Ireland, New Zealand, Hong Kong and Singapore. You must pick one for the first launch. (Doc 03)
-2. **Which AI model to use.** After the deep dive in Doc 15, the recommendation is Claude Sonnet 5.5 for every word the user reads and Claude Haiku 5.5 for the safety classifier and background jobs. Opus 5.5 costs twice as much and is only worth it if your Day 18 blind test shows a clear tone win. The decision rules are written down in Doc 15 §7 so the test, not opinion, decides.
-3. **Free tier generosity.** I propose 3 AI-guided sessions per month free, unlimited non-AI calming tools. (Doc 04)
-4. **Whether to spend on a lawyer before launch.** I strongly recommend yes, about US$1,500–5,000. You can launch a closed beta without it, but not a public paid product. (Doc 03)
-5. **Your personal time budget.** The 30-day plan assumes roughly 3–4 hours per day. If you have 1 hour per day, it is a 90-day plan. (Doc 12)
+## For challengers (ChatGPT, Gemini, Grok, people)
+
+The most useful challenges attack the **evidence register**, the **thresholds**, or the **tests**. Here is where the plan expects to be attacked, and where it answers.
+
+| Likely challenge | Where it is answered |
+|---|---|
+| "Why would anyone use this instead of free ChatGPT or How We Feel?" | Unknown, and the plan says so. E1, E2a and E2b test it before the pilot is built ([04](04-hypotheses-and-experiments.md)) |
+| "Does AI add value?" | Unknown. The pilot crossover tests it, and a tie removes AI (E4, H3) |
+| "The pilot is too small" | Yes, for small effects. The power table shows what 40 people can and cannot detect (E-STAT-01) |
+| "Is it safe?" | Not claimed. Minimum evaluation sizes (20 per crisis route), fail-closed design, flags that survive higher routes, and stated limits are in [07](07-safety-spec.md) |
+| "Is it legal?" | Not claimed. Primary statute text plus questions for a lawyer are in [10](10-regulatory.md) |
+| "The numbers are made up" | The economic inputs are assumptions, labelled as such in one file, with the pilot designed to replace them ([11](11-economics.md)). The model solves break-even from its own simulation, so the headline cannot drift from the tables |
+| "Your tests pass, so what?" | Agreed: passing tests prove only what they test. The first v2 draft passed every test and still had 21 problems. That is why each claim in [03](03-review-log.md) names a test, or says "not yet built" |
+| "The database or safety code is wrong" | Run the tests; add a failing test; we will fix it and log it in [03](03-review-log.md) |
+| "A cited source does not say that" | Check the ID in [02](02-evidence-register.md). If you are right, the claim is wrong |
+
+**What the plan still lacks:**
+- real user data;
+- a qualified reviewer's sign-off;
+- legal advice;
+- ethics review;
+- a human security review;
+- the app itself. The controller and schema are tested in isolation, but nothing is tested end to end.
+
+An AI assistant cannot supply any of these.
