@@ -137,37 +137,74 @@ export function SortCard({
 
 export function OptionCard({
   title,
+  detail,
   children,
+  selected: selectedProp,
+  expanded: expandedProp,
+  onSelect,
+  role,
+  tabIndex,
+  onKeyDown,
+  ref,
 }: {
   title: string;
-  children: ReactNode;
+  detail?: string;
+  children?: ReactNode;
+  selected?: boolean;
+  expanded?: boolean;
+  onSelect?: () => void;
+  role?: "radio";
+  tabIndex?: number;
+  onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
+  ref?: Ref<HTMLButtonElement>;
 }) {
-  const [selected, setSelected] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [localSelected, setLocalSelected] = useState(false);
+  const [localExpanded, setLocalExpanded] = useState(false);
   const panelId = useId();
+  const selected = selectedProp ?? localSelected;
+  const expanded = expandedProp ?? localExpanded;
+  const expandable = children !== undefined && children !== null;
+
+  const handleSelect = () => {
+    if (onSelect) {
+      onSelect();
+      return;
+    }
+    setLocalSelected((current) => !current);
+    if (expandable) setLocalExpanded((current) => !current);
+  };
 
   return (
     <article className={`option-card${selected ? " is-selected" : ""}`}>
       <button
+        ref={ref}
         type="button"
         className="option-card-trigger"
-        aria-pressed={selected}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        onClick={() => {
-          setSelected((current) => !current);
-          setExpanded((current) => !current);
-        }}
+        role={role}
+        aria-pressed={role ? undefined : selected}
+        aria-checked={role === "radio" ? selected : undefined}
+        aria-expanded={expandable ? expanded : undefined}
+        aria-controls={expandable ? panelId : undefined}
+        tabIndex={role ? tabIndex : undefined}
+        onKeyDown={onKeyDown}
+        onClick={handleSelect}
       >
-        <span className="option-card-title">{title}</span>
+        <span className="option-card-copy">
+          <span className="option-card-title">{title}</span>
+          {detail ? <span className="option-card-detail">{detail}</span> : null}
+        </span>
         <span className="option-card-icons">
           {selected ? <Check aria-hidden="true" weight="bold" /> : null}
-          <CaretDown aria-hidden="true" className={expanded ? "is-open" : ""} />
+          {expandable ? (
+            <CaretDown aria-hidden="true" className={expanded ? "is-open" : ""} />
+          ) : null}
         </span>
       </button>
-      <div className="option-card-children" id={panelId} hidden={!expanded}>
-        {children}
-      </div>
+      {expandable ? (
+        <div className="option-card-children" id={panelId} hidden={!expanded}>
+          {children}
+        </div>
+      ) : null}
     </article>
   );
 }
