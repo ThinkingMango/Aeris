@@ -21,6 +21,7 @@ Read [`docs/00-START-HERE.md`](docs/00-START-HERE.md). It indexes the full produ
 11. Costs
 12. 30-day build & launch plan
 13. v0 prompts (copy and paste)
+14. LLM provider & model selection (Claude vs OpenAI vs Gemini vs DeepSeek vs Qwen)
 
 ## Stack (planned)
 

@@ -27,6 +27,7 @@ Everything is written so that someone with no coding background can follow it. W
 | 11 | [Costs](11-costs.md) | Development, tools, and AI costs with worked examples | 15 min |
 | 12 | [30-Day Build & Launch Plan](12-thirty-day-plan.md) | Day-by-day what to do, with exact instructions | 30 min |
 | 13 | [v0 Prompts](13-v0-prompts.md) | Copy-and-paste prompts to generate each screen in v0 | Reference |
+| 14 | [LLM Provider & Model Selection](14-llm-provider-and-model-selection.md) | Claude vs OpenAI vs Gemini vs DeepSeek vs Qwen, and reasoning vs standard, for this app | 25 min |
 | — | [supabase/schema.sql](../supabase/schema.sql) | The actual database setup file, ready to run | Reference |
 
 ---
