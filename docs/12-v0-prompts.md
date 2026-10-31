@@ -74,7 +74,7 @@ Create content/reset_content.json with EXACTLY the JSON below, and content/helpl
 
 ```
 Follow the AERIS RULES. Build the shell and the two always-available screens BEFORE any reset step, so every later screen inherits them.
-Routes: "/" placeholder (the landing page comes later), "/reset" (the whole reset flow as ONE route with in-page state; never put choices in the URL), "/help", "/more".
+Routes: "/" redirects to "/reset" until the landing page is built in R5 (never leave "/" blank), "/reset" (the whole reset flow as ONE route with in-page state; never put choices in the URL), "/help", "/more".
 A layout that always shows HelpFooter at the bottom and, on /reset, StopButton top-left and ProgressDots top-right.
 /help, the support screen: headline "Help is available now." Three SupportButtons from content/helplines.ts: "Call [emergency number]" (emergency), "Call or text [crisis line]", "Call [abuse line]". Caption "These are free and confidential." A "Back" GhostButton. Calm, no red, no alarm icons.
 /more, the limits screen: headline "This tool helps you prepare. It can't fix how you're being treated." Body: "If you're facing bullying, discrimination or an unsafe workload, these can help:" then three link rows from helplines.ts (workplaceAdvice, unionOrEAP, employmentLaw); show the label with no link if the url is empty. Then TextLink "If you're not safe, get help now" to /help, and GhostButton "Back to the reset" to /reset.
