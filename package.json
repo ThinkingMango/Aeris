@@ -3,11 +3,32 @@
   "private": true,
   "type": "module",
   "description": "Aeris discovery pilot. See docs/00-START-HERE.md.",
-  "engines": { "node": ">=22.6" },
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
     "test:safety": "node --experimental-strip-types --no-warnings --test src/safety/controller.test.ts src/content/content.test.ts",
     "test:db": "bash supabase/tests/run_local.sh",
     "test:db:mutations": "bash supabase/tests/mutation_check.sh",
     "test": "npm run test:safety && npm run test:db"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
   }
 }
