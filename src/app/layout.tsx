@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
-import { HelpFooter } from "@/components/aeris-primitives";
+import { AerisAppShell } from "@/components/aeris-app-shell";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,10 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable} bg-background`} data-scroll-behavior="smooth">
       <body className="font-sans">
-        <div className="app-shell">
-          {children}
-          <HelpFooter />
-        </div>
+        <AerisAppShell>{children}</AerisAppShell>
       </body>
     </html>
   );

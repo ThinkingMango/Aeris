@@ -20,7 +20,7 @@
 ```
 AERIS RULES, apply to every screen and every change, no exceptions:
 1. NO TEXT INPUTS in the reset. Every input is a tap. The ONLY input in the whole site is the email field on the landing page (R5).
-2. NOTHING YOU CHOOSE LEAVES THE PHONE. No analytics, network requests, cookies or logging inside /reset, /help or /more. All choices live in React state. The only browser storage allowed is localStorage key "aeris.savedStep" holding a step id, read inside useEffect and wrapped in try/catch.
+2. NOTHING YOU CHOOSE LEAVES THE PHONE. No analytics, network requests, cookies or logging inside /reset, /help or /more. All choices live in React state. The only browser storage allowed is localStorage key "aeris.savedStep" holding a step id and, for an opener, its selected index. Read inside useEffect; wrap every storage access in try/catch.
 3. All wording for cards, steps and openers comes from content/reset_content.json. Never invent, reword or add content.
 4. No red anywhere, including Stop, Delete and errors. No alarm icons.
 5. Nothing pre-selected. No streaks, badges, confetti, praise, scores, countdown pressure or celebratory animation.
@@ -64,8 +64,8 @@ Components (show all on one page, both themes):
 ## R0 — Content file (paste the JSON with this message)
 
 ```
-Create content/reset_content.json with EXACTLY the JSON below, and content/helplines.ts exporting { country: "[pilot country]", emergencyNumber: "[emergency number]", crisisLine: "[crisis line]", abuseLine: "[abuse line]", workplaceAdvice: { label: "[workplace advice service]", url: "" }, unionOrEAP: { label: "[union or employee assistance]", url: "" }, employmentLaw: { label: "[employment-law help]", url: "" } }. Every screen reads its words from these two files. Do not change the wording.
-<paste the full contents of src/content/reset_content.json from the Aeris repository here>
+Create content/reset_content.json with EXACTLY the JSON below, and content/helplines.ts exporting { country: "[pilot country]", emergencyNumber: "[emergency number]", crisisLine: "[crisis line]", abuseLine: "[abuse line]", workplaceAdvice: { label: "[workplace advice service]", url: "" }, unionOrEAP: { label: "[union or employee assistance]", url: "" }, employmentLaw: { label: "[employment-law help]", url: "" } }. Card, step and opener wording comes from content/reset_content.json; support numbers and link labels come from content/helplines.ts. Other interface copy must match R1–R4 exactly. Do not invent or reword any of it.
+<paste the full contents of content/reset_content.json from the Aeris repository here>
 ```
 
 **Before any real person uses the prototype** (D3), replace every bracketed value in `helplines.ts` with your pilot country's real numbers and links. Verify each on the service's own website. The prototype's SupportButton refuses to dial a placeholder, but a participant who needs help must get a real number. The clinician re-checks them all before Stage 3 ([07](07-safety-spec.md) §0).
