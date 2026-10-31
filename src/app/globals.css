@@ -386,6 +386,12 @@ button:disabled {
   opacity: 0.9;
 }
 
+.aeris-primary:disabled {
+  border-color: var(--line);
+  background: var(--line);
+  color: var(--ink);
+}
+
 .aeris-ghost {
   border-color: var(--line);
   background: var(--surface);
@@ -557,8 +563,20 @@ button:disabled {
   transition: transform 300ms ease-out;
 }
 
+.option-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .option-card-title {
   font-weight: 600;
+}
+
+.option-card-detail {
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .option-card-icons {
@@ -580,6 +598,57 @@ button:disabled {
 .option-card-children {
   padding: 0 16px 14px;
   border-top: 1px solid var(--line);
+}
+
+.opener-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.opener-choice-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.opener-choice-select {
+  display: flex;
+  min-height: 56px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.opener-choice-select[aria-checked="true"] {
+  border-color: var(--accent);
+}
+
+.opener-choice-select > svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: var(--accent);
+}
+
+.opener-copy-button {
+  width: auto;
+  min-width: 96px;
+  min-height: 56px;
+  flex: 0 0 auto;
+  align-self: center;
+  padding-inline: 12px;
+  font-size: 16px;
 }
 
 .option-child-list {
@@ -1112,12 +1181,19 @@ button:disabled {
 }
 
 .reset-choice-list,
-.reset-worry-list {
+.reset-worry-list,
+.reset-sort-list,
+.reset-step-list {
   display: flex;
   width: 100%;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 24px;
+}
+
+.reset-worry-list {
+  flex-direction: row;
+  flex-wrap: wrap;
 }
 
 .reset-choice-list {
@@ -1126,6 +1202,17 @@ button:disabled {
 
 .reset-navigation {
   margin-top: 8px;
+}
+
+.reset-breathing-circle {
+  margin-top: 24px;
+}
+
+.reset-breathing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .saved-step-block {
