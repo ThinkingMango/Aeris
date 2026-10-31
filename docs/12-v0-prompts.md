@@ -59,7 +59,8 @@ S6: one sense at a time: "Name 5 things you can see." with five empty circles th
 Use the Aeris design system. Build the sort-and-step screen.
 Part 1: "What's on your mind about this?" an editable list (each item max 140 characters) with "+ add". In the scripted arm the list starts empty.
 Part 2: SortBoard with the three labelled zones. Items move by tap (shows three zone buttons) or drag.
-Part 3 (after sorting): "One small step for this?" showing the first "Mine to act on" item, three suggestion chips, and a text box. PrimaryButton "That's my step". If nothing is in "Mine to act on": "Nothing here is yours to act on right now. That's allowed." with PrimaryButton "OK".
+Part 3 (after sorting): "One small step for this?" showing the first "Mine to act on" item, three suggestion chips (each at most 80 characters; passed in as a `suggestions` prop so the scripted arm can pass fixed ideas and the AI arm can pass model-written ones), and a text box. PrimaryButton "That's my step". If nothing is in "Mine to act on": "Nothing here is yours to act on right now. That's allowed." with PrimaryButton "OK".
+Provide a variant prop `aiArm`: when true, worry items may arrive pre-filled from props and stay fully editable, and a DisclosureLine "Some words here are written by AI." appears under the suggestions.
 ```
 
 ## P6 — S8 Feedback and S9 Done
@@ -75,11 +76,11 @@ S9: "That's it for now." If a next step was chosen, show it in a quiet sage-ink-
 ```
 Use the Aeris design system. Same calm palette, no red, no alarm icons. These are DRAFT copy pending clinical review.
 S10 Check-in: "Before we go on: are you safe right now?" three large buttons: "Yes", "Not sure", "No". A small persistent card at the bottom: "Support is available any time" with a "Get help" link.
-S11: one component with five variants via a `route` prop; each variant has a headline, ONE large primary action button (tel: or sms: link from props), and optional secondary content:
+S11: one component with five variants via a `route` prop, plus a `resources` array prop (emergency_number, crisis_line, abuse_line, youth_line, quick_exit) that adds any extra required resources as secondary buttons, so a screen can show, for example, the abuse line AND the youth line. Each variant has a headline, ONE large primary action button (tel: or sms: link from props), and optional secondary content:
 - emergency_medical: "This sounds like an emergency." / "Call {emergencyNumber}".
 - crisis_self_harm: "It sounds like things are really heavy right now." then "I'm an AI tool and can't keep you safe, but people can, right now." / "Call or text {crisisLine}" / secondary GhostButton "I'm safe right now".
 - crisis_harm_to_others: "It sounds like you might hurt someone." / "Call {emergencyNumber}" / secondary "{crisisLine}".
-- safety_abuse: "You deserve to be safe." / "{abuseLine}" / a "Quick exit" button fixed top-right that navigates to a neutral weather page.
+- safety_abuse: "You deserve to be safe." / "{abuseLine}" / a "Quick exit" button fixed top-right that calls window.location.replace() to a neutral weather page (replace, not push, so Back does not return) and clears this app's session storage.
 - minor_exit: "Aeris is built for adults." / "{youthLine}" / "Thanks for trying it."
 Not dismissible by swipe; only by the buttons shown.
 ```
@@ -88,6 +89,6 @@ Not dismissible by swipe; only by the buttons shown.
 
 ```
 Use the Aeris design system. Build two screens.
-S0 Enrolment (one scrolling screen): "Aeris pilot" headline; a plain-language box: "Aeris is a pilot of a stress tool for work moments. It is not therapy, medical care, or an emergency service. You must be 18 or over." Then separate toggles, all OFF by default: "I agree to the terms", "I've read the privacy notice", "I agree to take part in the pilot", "I'm 18 or over", and an optional one "You may contact me for a short interview". A country picker. PrimaryButton "Join" enabled only when the four required toggles are on.
-S12 Settings: Country; "About the pilot"; "Privacy notice"; "Report a problem"; "Delete my account and data" in clay-ink text with a two-step confirmation sheet explaining what is deleted and what remains (anonymous counts, provider copies up to 30 days, backups).
+S0 Enrolment (one scrolling screen): "Aeris pilot" headline; a plain-language box: "Aeris is a pilot of a stress tool for work moments. It is not therapy, medical care, or an emergency service. You must be 18 or over." Then separate toggles, all OFF by default: "I agree to the terms", "I've read the privacy notice", "I agree to take part in the pilot", "I'm 18 or over", and an optional one "You may contact me for a short interview". A REQUIRED country picker with no default, and a state or region picker that appears for countries where it matters (for example US states). PrimaryButton "Join" enabled only when the four required toggles are on and a country is chosen.
+S12 Settings: Country and region; "About the pilot"; "Privacy notice"; "Report a problem"; "Delete my account and data" in clay-ink text with a two-step confirmation sheet explaining what is deleted and what remains (anonymous counts, provider copies up to 30 days, backups).
 ```

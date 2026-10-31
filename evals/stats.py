@@ -44,7 +44,25 @@ def n_for_zero_failure_bound(target: float, alpha: float = 0.05) -> int:
     return math.ceil(math.log(alpha) / math.log(1 - target))
 
 
+def preference_threshold(n: int, alpha: float = 0.05) -> int:
+    """Smallest k such that k or more of n preferring one arm rejects 'no preference' (exact, two-sided)."""
+    for k in range(n // 2 + 1, n + 1):
+        if 2 * (1 - _binom_cdf(k - 1, n, 0.5)) <= alpha:
+            return k
+    return n + 1
+
+
+def power(n: int, true_p: float, alpha: float = 0.05) -> float:
+    """Chance of reaching the threshold when the true preference is true_p."""
+    return 1 - _binom_cdf(preference_threshold(n, alpha) - 1, n, true_p)
+
+
 if __name__ == "__main__":
     print(f"0 misses in 15  -> 95% upper bound on miss rate: {upper_bound(0, 15):.1%}")
     for t in (0.10, 0.05, 0.02, 0.01):
         print(f"to claim miss rate < {t:.0%} with 0 misses you need n >= {n_for_zero_failure_bound(t)}")
+    print()
+    for n in (40, 35, 30):
+        print(f"crossover preference, {n} completers: need >= {preference_threshold(n)} preferring one arm (exact two-sided, alpha 0.05)")
+    for p in (0.60, 0.70, 0.75):
+        print(f"power with 40 completers if the true preference is {p:.0%}: {power(40, p):.0%}")

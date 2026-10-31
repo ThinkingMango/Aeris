@@ -58,14 +58,16 @@ def psql_file(args, db, path):
 # expectation: ("ok",) | ("value", "x") | ("error", "substring")
 TESTS = [
     # ---- enrolment and consent gates (red-team A5) ----
-    ("P11", "A sets A's own country and timezone", "authenticated", A,
-     "with u as (update public.profiles set country_code = 'GB', timezone = 'Europe/London' returning 1) select count(*) from u;", ("value", "1")),
     ("N25", "A cannot start a session before recording consent", "authenticated", A,
      "insert into public.sessions (situation) values ('work_tomorrow');", ("error", "consent missing")),
     ("N26", "An uninvited account cannot start a session", "authenticated", S,
      "insert into public.sessions (situation) values ('work_tomorrow');", ("error", "not enrolled")),
     ("N30", "An uninvited account has no arm", "authenticated", S, "select public.my_arm() is null;", ("value", "t")),
     ("P06", "A records the four required consents", "authenticated", A, CONSENTS_SQL, ("ok",)),
+    ("N33", "A cannot start a session before choosing a country (it sets the crisis lines)", "authenticated", A,
+     "insert into public.sessions (situation) values ('work_tomorrow');", ("error", "country required")),
+    ("P11", "A sets A's own country and timezone", "authenticated", A,
+     "with u as (update public.profiles set country_code = 'GB', timezone = 'Europe/London' returning 1) select count(*) from u;", ("value", "1")),
 
     # ---- legitimate use must work ----
     ("P01", "A starts a session; server assigns the arm", "authenticated", A,

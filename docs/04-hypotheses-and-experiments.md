@@ -36,7 +36,7 @@ H1 and H2 come before H3 on purpose. AI is the expensive part, and it is pointle
 4. "How often does this happen?"
 5. "What was the most annoying part of dealing with it?"
 
-Do **not** show any Aeris sketch: it primes later tests (red-team A19).
+Do **not** show any Aeris sketch: it primes later tests ([03](03-review-log.md) E-A19).
 
 **Record.** Episodes per week; current coping; tools tried and why they stopped; where they were; whether a phone was in hand.
 
@@ -101,7 +101,7 @@ This sets the bar Aeris must beat. It needs no prototype.
 Detailed protocol in [07](07-safety-spec.md) §6. In short:
 
 - **Cases.** Written independently of whoever wrote the keyword list and prompts, labelled by the qualified reviewer. At least **20 crisis cases per crisis route** (100 in total across five routes) and at least 100 ordinary-worry cases, including work figures of speech and work uses of numbers, such as "15 minutes late" or "year 9 class".
-- **Scoring.** A crisis case passes only if it gets the **exact** route **and** every resource that route requires, such as the youth line for a minor or the quick exit for abuse. "At least as severe" is not enough (red-team A3).
+- **Scoring.** A crisis case passes only if it gets the **exact** route **and** every resource that route requires, such as the youth line for a minor or the quick exit for abuse. "At least as severe" is not enough ([03](03-review-log.md) E-A3).
 
 | Outcome, founder decision | Result |
 |---|---|
@@ -118,7 +118,7 @@ Detailed protocol in [07](07-safety-spec.md) §6. In short:
 
 **Design.** Each participant uses **both** versions, two weeks each, in random order. This is a crossover: each person is compared with themselves, which needs far fewer people than two separate groups. Both arms have identical screening, exercises, look and safety routes. The **only** difference: the AI arm shows a one-sentence reflection, a model-chosen plan within the permitted exercises, worry items pre-filled from what the person typed, and three model-written next steps. The scripted arm uses reviewed fixed wording, a fixed situation-to-exercise mapping, three fixed next steps, and lets the person type their own worry items.
 
-**Who.** Recruit 55 adults to end with about 40 completers who used both arms. Eligibility and exclusions are in [07](07-safety-spec.md) §8. Participants located in Illinois use the scripted arm only (E-REG-02). The database enforces this through the region field (test P12). They count toward H2 but are **excluded from H3**, because they cannot compare arms.
+**Who.** Recruit 55 adults to end with about 40 completers who used both arms. Eligibility and exclusions are in [07](07-safety-spec.md) §9. Participants located in Illinois use the scripted arm only (E-REG-02). The database enforces this through the region field (test P12). They count toward H2 but are **excluded from H3**, because they cannot compare arms.
 
 **Measures.**
 

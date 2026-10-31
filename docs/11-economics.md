@@ -112,8 +112,8 @@ At the fair-use cap of 60 sessions a user costs $0.90/month in AI against $3.98 
 
 ## What these tables mean
 
-1. **A subscriber contributes about $4.69 a month at steady state.** Annual subscribers stay longer, so they are 77% of the paying base even though they are 60% of new sales. The v1 figure of $5.20 weighted by new sales and was too high (red-team A7).
-2. **A signup is worth about $1.09 at base.** That figure is the most you could ever pay to acquire one, before any fixed costs. The v1 E6 threshold of "$2 per signup" was above it, which would have meant losing money on every signup (red-team A8). E6 now uses $0.50.
+1. **A subscriber contributes about $4.69 a month at steady state.** Annual subscribers stay longer, so they are 77% of the paying base even though they are 60% of new sales. The first v2 draft's figure of $5.20 weighted by new sales and was too high ([03](03-review-log.md) E-A7).
+2. **A signup is worth about $1.09 at base.** That figure is the most you could ever pay to acquire one, before any fixed costs. The first v2 draft's E6 threshold of "$2 per signup" was above it, which would have meant losing money on every signup ([03](03-review-log.md) E-A8). E6 now uses $0.50.
 3. **AI cost is not the problem.** Even a user at the 60-session fair-use cap costs $0.90 a month against $3.98 of annual-plan revenue.
 4. **The base scenario loses money for two years.** 400 signups a month reach about 84 paying subscribers by month 24, still about $300 a month short of covering fixed costs.
 5. **The high scenario works**, but it needs 1,500 signups a month **and** 5% conversion. Both are unproven.

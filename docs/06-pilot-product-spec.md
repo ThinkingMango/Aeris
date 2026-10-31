@@ -13,11 +13,11 @@
 
 ## 2. The three exercises
 
-All three are inactive in the database until the qualified reviewer approves the final script (test N24). Wording below is draft.
+All three are inactive in the database until the qualified reviewer approves the final script with a real name and date (tests N24, N28). The app offers only exercises the database reports active (controller test "no exercise is offered until the database reports it active"), and the database refuses to log an inactive one (N27). Wording below is draft.
 
 | ID | Name | What happens | Evidence and limits |
 |---|---|---|---|
-| `long_exhale_breathing` | Long-exhale breathing | 2 minutes. A circle grows on the in-breath (about 4 seconds) and shrinks on a longer out-breath (about 6 seconds). Reduced-motion version fades instead of scaling | Daily practice of long-exhale breathing improved mood in a trial (E-EFF-02). Acute, one-off relief is **not** established. Copy must not promise it |
+| `long_exhale_breathing` | Long-exhale breathing | 2 minutes. A circle grows on the in-breath (about 4 seconds) and shrinks on a longer out-breath (about 6 seconds). Reduced-motion version fades instead of scaling | In a trial, daily practice of cyclic sighing, a **different** long-exhale protocol, improved mood more than mindfulness. There was no inactive control (E-EFF-02). Acute, one-off relief is **not** established. Copy must not promise it. The reviewer may prefer the trial's protocol |
 | `grounding_54321` | Grounding 5-4-3-2-1 | 2 minutes. Name 5 things you can see, 4 you can hear, 3 you can touch, 2 you can smell, 1 you can taste. Tap to tick, no typing | Widely used grounding technique; no trial evidence cited here. Present as "a way to bring your attention back", not as treatment |
 | `sort_and_step` | Sort it, then one step | 3 minutes. List what is on your mind; sort each item into "mine to act on", "not mine", "not today"; choose one small next step for a "mine" item | Draws on problem-solving and controllability ideas; no Aeris-specific evidence. This is the exercise the AI arm most changes |
 
@@ -32,13 +32,13 @@ Open app
        ─► S1 Home: one button "Something at work"
        ─► S2 Which is closest? [Tomorrow] [Replaying something] [Too much at once] [Something else]
        ─► S3 Want to say more? (optional text) ─── every text field passes the safety screen ([07](07-safety-spec.md))
-       ─► Safety controller decides the route
+       ─► Safety controller decides the route (and the server re-checks it before any AI call)
              ├─ normal ─► S4 Plan ─► S5–S7 exercise(s) ─► S8 Feedback ─► S9 Done
-             ├─ restricted ─► S10 Check-in ("Are you safe right now?") ─► breathing or grounding only, resources pinned, no AI text
+             ├─ restricted ─► S10 Check-in ("Are you safe right now?") ─► breathing or grounding only, crisis line pinned, no AI text
              └─ crisis routes ─► S11 Crisis screen for that route ([07](07-safety-spec.md) §3)
 ```
 
-The tension score is **optional** and asked only once, before the plan. There is no after-score in the pilot, because a before/after pair invites the person to report improvement (A32).
+The tension score is **optional** and asked only once, before the plan. There is no after-score in the pilot, because a before/after pair invites the person to report improvement (A32). The database has no after-score column (test N32).
 
 ## 4. The two arms
 
@@ -51,11 +51,11 @@ Everything is identical except the rows marked **differs**.
 | S4 plan wording | **Differs.** Fixed reviewed sentence per situation, e.g. "Let's settle your body first, then sort what's yours to act on." | **Differs.** One reflection sentence plus one proposal sentence, written by the model, validated, at most 60 words |
 | Exercise choice | **Differs.** Fixed mapping (below) | **Differs.** Model chooses 1–3 from the permitted list; validated |
 | Worry items in `sort_and_step` | **Differs.** Person types their own | **Differs.** Pre-filled from what they typed; empty if they typed nothing; editable |
-| Next-step ideas | **Differs.** Three fixed reviewed ideas per situation | **Differs.** Three model-written ideas, validated |
+| Next-step ideas | **Differs.** Three fixed reviewed ideas per situation | **Differs.** Three model-written ideas, at most 80 characters each, returned in the same call as the reflection (`suggestions` in `src/ai/read_schema.json`) and validated |
 | On any AI failure | — | Shows the scripted wording and logs a fallback, so the arm is never broken |
 | AI disclosure | — | "Some words here are written by AI." on S4, every session |
 
-**Scripted mapping.**
+**Scripted mapping.** Each step is used only if the controller permits it on the current route **and** the exercise is active. If no step survives, the plan falls back to `fallbackPlan` (breathing if permitted, otherwise nothing).
 
 | Situation | Tension 7 or more, or not given | Tension under 7 |
 |---|---|---|
@@ -68,7 +68,7 @@ Everything is identical except the rows marked **differs**.
 
 | ID | Screen | Draft copy |
 |---|---|---|
-| S0 | Enrolment, once | "Aeris is a pilot of a stress tool for work moments. It is not therapy, not medical care, and not for emergencies. You must be 18 or over." Consent toggles for terms, privacy, pilot participation, 18+, and optional research contact. Country picker sets resources |
+| S0 | Enrolment, once | "Aeris is a pilot of a stress tool for work moments. It is not therapy, not medical care, and not for emergencies. You must be 18 or over." Consent toggles for terms, privacy, pilot participation, 18+, and optional research contact, all off by default. **Country is required** and sets the crisis lines (test N33). Region (for example US state) is asked where it changes the rules, such as Illinois (P12). Only invited email addresses can enrol (N26) |
 | S1 | Home | Button: "Something at work". Small link: "Breathe now". Footer: "In danger? [Get help now]" |
 | S2 | Situation | "Which is closest?" Four large buttons |
 | S3 | Say more | "Want to say more? You can skip this." Text box. "Skip" and "Next" equally prominent |
@@ -76,11 +76,11 @@ Everything is identical except the rows marked **differs**.
 | S5 | Breathing | Circle, cue text "In… / Out…", 2-minute arc, "Stop" always visible |
 | S6 | Grounding | One sense at a time, tap to tick |
 | S7 | Sort and step | Items, three zones, then "One small step for this?" with three ideas and a text box |
-| S8 | Feedback | "How helpful was that?" 1–5 buttons with **no** default selected; "Would you use this again for a moment like this?" Yes, No, Not sure. Skippable |
+| S8 | Feedback | "How helpful was that?" 1–5 buttons with **no** default selected; "Would you use this again for a moment like this?" Yes, No, Not sure. Either question may be answered alone (P05). Skippable |
 | S9 | Done | "That's it for now." Optional: the next step they chose. No streaks, no celebration |
-| S10 | Check-in | "Before we go on: are you safe right now?" [Yes] [Not sure] [No]. "Not sure" and "No" go to the crisis screen for self-harm |
-| S11 | Crisis screens | One per route; content in [07](07-safety-spec.md) §3 |
-| S12 | Settings | Country, delete my account and data, privacy notice, about the pilot, help line |
+| S10 | Check-in | "Before we go on: are you safe right now?" [Yes] [Not sure] [No]. The answer goes to `checkInAnswer`. "Not sure" and "No" go to the self-harm crisis screen; "Yes" stays restricted |
+| S11 | Crisis screens | One per route; content in [07](07-safety-spec.md) §3. The resources shown come from the controller's `resources` list, so co-occurring risks (a minor who is also unsafe at home) show everything required. The abuse screen's quick exit uses `location.replace` so Back does not return ([07](07-safety-spec.md) §8) |
+| S12 | Settings | Country and region, delete my account and data, privacy notice, about the pilot, help line. Emails (sign-in link, weekly survey) use a neutral sender and subjects that do not mention stress or safety |
 
 ## 6. Look and feel
 

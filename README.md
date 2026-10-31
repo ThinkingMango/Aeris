@@ -2,7 +2,7 @@
 
 A proposed stress-management tool for stressful moments at work, and the plan to find out whether it should exist.
 
-**Status (31 October 2026):** discovery phase. No product has been released. The plan was rewritten after an independent review; version 1 is archived.
+**Status (31 October 2026):** discovery phase. No product has been released. The plan was rewritten after an independent review (version 1 is archived), then revised again after an adversarial review of version 2. Every finding and its disposition is in [`docs/03-review-log.md`](docs/03-review-log.md).
 
 **Start here:** [`docs/00-START-HERE.md`](docs/00-START-HERE.md)
 
