@@ -81,21 +81,38 @@ TESTS = [
      "update public.sessions set completed = true returning completed_at is not null;", ("value", "t")),
     ("P05", "A leaves feedback with only 'would use again' (rating optional)", "authenticated", A,
      "insert into public.feedback (session_id, would_use_again) select id, true from public.sessions limit 1;", ("ok",)),
-    ("P07", "A sees only reviewed, active exercises", "authenticated", A, "select count(*) from public.exercises;", ("value", "3")),
+    ("P07", "A sees only reviewed, active exercises", "authenticated", A, "select count(*) from public.exercises;", ("value", "4")),
     ("P08", "A can read A's own arm", "authenticated", A, "select public.my_arm() is not null;", ("value", "t")),
-    ("P09", "A visitor can read the active exercise list", "anon", "", "select count(*) from public.exercises;", ("value", "3")),
+    ("P09", "A visitor can read the active exercise list", "anon", "", "select count(*) from public.exercises;", ("value", "4")),
     ("P10", "Server can reserve AI quota", "service_role", "", f"select app_private.reserve_ai_call('{A}', 'generate', 0.02) is not null;", ("value", "t")),
     ("N29", "Withdrawing a consent blocks new sessions", "authenticated", A,
-     "insert into public.consents (consent_type, version, granted) values ('pilot_participation','2026-11-02',false); "
+     "insert into public.consents (consent_type, version, granted) values ('pilot_participation','2026-11-01',false); "
      "insert into public.sessions (situation) values ('work_replay');", ("error", "consent missing")),
     ("P13", "Re-granting consent allows sessions again", "authenticated", A,
-     "insert into public.consents (consent_type, version, granted) values ('pilot_participation','2026-11-03',true); "
+     "insert into public.consents (consent_type, version, granted) values ('pilot_participation','2026-11-01',true); "
      "insert into public.sessions (situation) values ('work_replay') returning 1;", ("value", "1")),
+    ("N40", "With the AI arm off (the default until Stage 5) everyone is scripted", "authenticated", B,
+     "select public.my_arm();", ("value", "scripted")),
+    ("P15", "A conversation-reset session can be logged (Stages 1-4 wedge)", "authenticated", A,
+     "with s as (insert into public.sessions (situation) values ('conv_feedback') returning id) "
+     "insert into public.exercise_runs (session_id, exercise_id, position) select id, 'conversation_reset', 1 from s returning 1;", ("value", "1")),
+    ("P16", "The server can switch the AI arm on for Stage 5", None, None,
+     "update app_private.settings set ai_arm_enabled = true; select ai_arm_enabled from app_private.settings;", ("value", "t")),
     ("P12", "Setting region US-IL puts A on the scripted arm (Illinois rule)", "authenticated", A,
-     "update public.profiles set region = 'US-IL'; select public.my_arm();", ("value", "scripted")),
+     "update public.profiles set country_code = 'US', region = 'US-IL'; select public.my_arm();", ("value", "scripted")),
+    ("N37", "A region must belong to the chosen country", "authenticated", A,
+     "update public.profiles set country_code = 'GB';", ("error", "violates check constraint")),
+    ("N38", "A US participant without a region cannot start a session", "authenticated", A,
+     "update public.profiles set region = null; insert into public.sessions (situation) values ('work_replay');", ("error", "region required")),
+    ("N36", "Raising a consent document's version blocks sessions until re-consent", None, None,
+     f"update app_private.required_consents set version = '2026-12-01' where consent_type = 'privacy'; "
+     f"select app_private.has_required_consents('{A}');", ("value", "f")),
+    ("P14", "Consenting to the new version allows sessions again", "authenticated", A,
+     "insert into public.consents (consent_type, version, granted) values ('privacy','2026-12-01',true); "
+     "insert into public.sessions (situation) values ('work_replay') returning 1;", ("value", "1")),
     ("N31", "A cannot change the before-score after the fact", "authenticated", A,
      "update public.sessions set tension_before = 1;", ("error", "permission denied")),
-    ("N32", "There is no after-score column to write (no anchoring, docs/06 section 3)", "authenticated", A,
+    ("N32", "There is no after-score column to write (no anchoring, docs/06 section B3)", "authenticated", A,
      "update public.sessions set tension_after = 1;", ("error", "does not exist")),
 
     # ---- the review's attacks must fail ----
@@ -119,7 +136,7 @@ TESTS = [
     ("N13", "A cannot change B's profile", "authenticated", A,
      f"with u as (update public.profiles set timezone = 'X' where user_id = '{B}' returning 1) select count(*) from u;", ("value", "0")),
     ("N14", "A cannot call the quota function", "authenticated", A,
-     f"select app_private.reserve_ai_call('{A}', 0.01);", ("error", "permission denied")),
+     f"select app_private.reserve_ai_call('{A}', 'generate', 0.01);", ("error", "permission denied")),
     ("N15", "A cannot read safety events", "authenticated", A, "select count(*) from app_private.safety_events;", ("error", "permission denied")),
     ("N16", "A cannot read B's arm through the private helper", "authenticated", A,
      f"select app_private.current_arm('{B}');", ("error", "permission denied")),
@@ -135,6 +152,12 @@ TESTS = [
      "update public.exercises set is_active = true, reviewed_by = null where id = 'unreviewed_draft';", ("error", "violates check constraint")),
     ("N28", "A blank reviewer name or implausible date is rejected (red-team A4)", None, None,
      "update public.exercises set is_active = true, reviewed_by = '  ', reviewed_at = '1900-01-01' where id = 'unreviewed_draft';", ("error", "violates check constraint")),
+    ("N34", "A missing approval date cannot slip through as NULL (third review)", None, None,
+     "update public.exercises set is_active = true, reviewed_by = 'Dr Reviewer With A Long Name, PhD', reviewed_at = null, "
+     "reviewed_version = version where id = 'unreviewed_draft';", ("error", "violates check constraint")),
+    ("N39", "Approval of an older content version cannot activate the current one", None, None,
+     "update public.exercises set is_active = true, reviewed_by = 'Test Reviewer, LCSW', reviewed_at = '2026-11-01', "
+     "reviewed_version = version - 1 where id = 'unreviewed_draft';", ("error", "violates check constraint")),
 
     # ---- the privilege catalogue grants nothing unexpected ----
     ("C01", "Functions a visitor can run: none", None, None,
@@ -152,6 +175,9 @@ TESTS = [
     ("C05", "Row level security is on for every public table", None, None,
      "select coalesce(string_agg(c.relname, ','), '') from pg_class c join pg_namespace n on n.oid = c.relnamespace "
      "where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;", ("value", "")),
+    ("N35", "Changing an exercise's content version withdraws its approval", None, None,
+     "update public.exercises set version = version + 1 where id = 'grounding_54321'; "
+     "select is_active from public.exercises where id = 'grounding_54321';", ("value", "f")),
 ]
 
 
@@ -169,9 +195,10 @@ def run_mode(args, mode):
     # Seed: two users; a reviewer activates the three exercises; B has a session.
     psql(args, db, "insert into app_private.invites (email) values ('a@test'), ('b@test');", check=True)
     psql(args, db, f"insert into auth.users values ('{A}', 'a@test'), ('{B}', 'b@test'), ('{S}', 'stranger@test');", check=True)
-    psql(args, db, "update public.exercises set is_active = true, reviewed_by = 'Test Reviewer, LCSW', reviewed_at = '2026-11-01';", check=True)
+    psql(args, db, "update public.exercises set is_active = true, reviewed_by = 'Test Reviewer, LCSW', reviewed_at = '2026-11-01', reviewed_version = version;", check=True)
     psql(args, db, "insert into public.exercises (id, name, duration_sec) values ('unreviewed_draft', 'Draft', 60);", check=True)
     psql(args, db, f"update public.profiles set country_code = 'GB' where user_id = '{B}';", check=True)
+    psql(args, db, f"update app_private.assignments set first_arm = 'ai' where user_id = '{B}';", check=True)  # so N40 is deterministic
     psql(args, db, f"insert into public.consents (user_id, consent_type, version, granted) select '{B}', t, '2026-11-01', true "
                    "from unnest(array['terms','privacy','pilot_participation','age_18_plus']) t;", check=True)
     psql(args, db, f"insert into public.sessions (id, user_id, situation) values ('{B_SESSION}', '{B}', 'work_replay');", check=True)
@@ -258,9 +285,13 @@ def deletion_tests(args, db):
         f"select (select count(*) from public.profiles where user_id = '{A}') + (select count(*) from public.sessions where user_id = '{A}') "
         f"+ (select count(*) from public.consents where user_id = '{A}') + (select count(*) from public.feedback where user_id = '{A}') "
         f"+ (select count(*) from public.exercise_runs where user_id = '{A}') + (select count(*) from app_private.assignments where user_id = '{A}');")
-    _, anon_events, _ = psql(args, db, "select count(*) from app_private.safety_events where user_id is null;")
+    _, event_rows, _ = psql(args, db, f"select count(*) from app_private.safety_events where user_id = '{A}' or user_id is null;")
+    _, folded, _ = psql(args, db, "select coalesce(sum(n), 0) from app_private.safety_event_counts where route = 'crisis_self_harm';")
+    _, shown, _ = psql(args, db, "select count(*) filter (where n is null) || '/' || count(*) from app_private.safety_summary(5);")
     return [("D01", "Deleting an account removes all of that user's rows", left == "0", f"rows_left={left}"),
-            ("D02", "Safety events survive only as anonymous counts", anon_events == "1", f"anonymous_events={anon_events}")]
+            ("D02", "A deleted account leaves no safety-event row, only a monthly count by route", event_rows == "0" and folded == "1",
+             f"event_rows={event_rows} folded={folded}"),
+            ("D03", "The safety summary suppresses counts below 5", shown == "1/1", f"suppressed/cells={shown}")]
 
 
 def main():

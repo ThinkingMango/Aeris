@@ -106,6 +106,28 @@ def validate_generated(fields: dict) -> list[str]:
     return problems
 
 
+READ_KEYS = ("reflection", "proposal", "plan", "worry_items", "suggestions", "escalate")
+
+
+def validate_read_shape(data) -> list[str]:
+    """Mirror of validateReadShape in controller.ts."""
+    if not isinstance(data, dict):
+        return ["output is not an object"]
+    problems = [f"unexpected field {k}" for k in data if k not in READ_KEYS]
+    for k in ("reflection", "proposal"):
+        if not isinstance(data.get(k), str) or not data[k].strip():
+            problems.append(f"{k} must be a non-empty string")
+    for k in ("plan", "worry_items", "suggestions"):
+        v = data.get(k)
+        if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+            problems.append(f"{k} must be an array of strings")
+    if isinstance(data.get("suggestions"), list) and len(data["suggestions"]) != LIMITS["max_suggestions"]:
+        problems.append(f"expected {LIMITS['max_suggestions']} suggestions, got {len(data['suggestions'])}")
+    if not isinstance(data.get("escalate"), bool):
+        problems.append("escalate must be true or false")
+    return problems
+
+
 # ---- routing, mirrored from controller.ts for a single ingest from a fresh session
 PRECEDENCE = ["emergency_medical", "crisis_self_harm", "crisis_harm_to_others", "safety_abuse",
               "minor_exit", "restricted", "normal"]

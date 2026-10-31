@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   startSession, ingest, decide, keywordScreen, confirmSafe, modelEscalated, checkInAnswer,
-  validateGenerated, validatePlan, fallbackPlan, combineForScreening, ALL_EXERCISES, type ScreenResult,
+  validateGenerated, validatePlan, validateReadShape, validateRead, fallbackPlan, combineForScreening, ALL_EXERCISES, type ScreenResult,
 } from "./controller.ts";
 
 const cls = (...signals: string[]): ScreenResult => ({ kind: "ok", source: "classifier", signals });
@@ -187,4 +187,32 @@ test("plan validation rejects empty, too long, duplicate, unknown or non-permitt
 });
 test("fallback on a crisis route offers no exercise", () => {
   assert.deepEqual(fallbackPlan(decide(ingest(startSession(), "moment_free_text", [cls("harm_to_others")]), "ai", ACTIVE)), []);
+});
+
+// ---------- third review: an empty object must not pass; motives must not be invented
+const GOOD_READ = {
+  reflection: "Friday's review is on your mind.", proposal: "Let's sort it, then pick one small step.",
+  plan: ["sort_and_step"], worry_items: ["review on Friday"],
+  suggestions: ["List three things that went well", "Ask for the agenda", "Pick one question to prepare"], escalate: false,
+};
+test("an empty or malformed read is rejected by the shape check", () => {
+  const d = decide(startSession(), "ai", ACTIVE);
+  assert.ok(validateRead({}, d).length >= 5);
+  assert.ok(validateRead(null, d).length > 0);
+  assert.ok(validateRead({ ...GOOD_READ, escalate: "no" }, d).some((p) => p.includes("escalate")));
+  assert.ok(validateRead({ ...GOOD_READ, suggestions: ["one"] }, d).some((p) => p.includes("suggestions")));
+  assert.ok(validateRead({ ...GOOD_READ, notice: "x" }, d).some((p) => p.includes("unexpected field")));
+  assert.ok(validateRead({ ...GOOD_READ, reflection: "  " }, d).some((p) => p.includes("reflection")));
+});
+test("a well-formed read passes, and its plan is still checked against the route", () => {
+  assert.deepEqual(validateRead(GOOD_READ, decide(startSession(), "ai", ACTIVE)), []);
+  const restricted = decide(modelEscalated(startSession()), "ai", ACTIVE);
+  assert.ok(validateRead(GOOD_READ, restricted).some((p) => p.includes("not permitted")));
+});
+for (const t of ["Your manager is clearly trying to sabotage you.", "It sounds like she doesn't respect you.", "That team sounds toxic.",
+                 "He may be jealous of you."]) {
+  test(`validator rejects an invented motive: ${JSON.stringify(t)}`, () => assert.ok(validateGenerated({ reflection: t }).length > 0));
+}
+test("reflecting the person's own worry about someone else is allowed", () => {
+  assert.deepEqual(validateGenerated({ reflection: "You're worried your manager might be upset about the delay." }), []);
 });

@@ -6,9 +6,11 @@
 
 ---
 
-## 1. Choose the pilot country first
+## 1. Choose one country and one language first
 
-The pilot runs in **one** country. Crisis numbers, privacy law, eligibility wording and the lawyer all depend on it. The analysis below is US-heavy because US primary texts were the ones available. If you pilot elsewhere, have the lawyer cover that country's equivalents: medical-device rules for software, health-data privacy, and any AI-chatbot laws. Do not rely on v1's world summaries, which were secondary and unverified.
+The pilot runs in **one** country and **one** language. "Global English-speaking professionals" is too broad for any stage ([03](03-review-log.md) Part F).
+
+**Stages 2–4 carry much less legal risk than Stage 5.** The tool takes no typed text, generates nothing, and makes no health claims. Most of the questions below matter mainly for Stage 5. The lawyer's short Stage 3 call should still confirm the consent text, the privacy notice and the claims. Crisis numbers, privacy law, eligibility wording and the lawyer all depend on it. The analysis below is US-heavy because US primary texts were the ones available. If you pilot elsewhere, have the lawyer cover that country's equivalents: medical-device rules for software, health-data privacy, and any AI-chatbot laws. Do not rely on v1's world summaries, which were secondary and unverified.
 
 ## 2. US federal: medical device or general wellness?
 
@@ -125,9 +127,10 @@ Google's Gemini API terms bar use "in clinical practice, to provide medical advi
 1. **FDA.** Does automated screening of free text for suicide risk, with routing to crisis screens, keep the pilot within the "low risk" factor of general wellness? Does the copy fit the first category? May the word "anxiety" appear anywhere, for example in a healthy-lifestyle context?
 2. **Illinois.** Is the scripted arm within the self-help exclusion when the pilot is invite-only (not "available to the public")? Does the AI arm's reflection count as "therapeutic communication"? Does an AI classifier in the scripted arm change the answer? Is a self-reported region enough to apply the Illinois rule?
 3. **California and New York.** With no persona, no conversation memory and no ongoing dialogue, is either arm a companion chatbot or AI companion? If California's law applies, what counts as an "evidence-based method" for suicidal ideation? How exposed are we to the private right of action?
-4. **Privacy.** Which privacy and breach rules apply to a 55-person pilot in [chosen country]? What must the consent form and privacy notice say, including provider retention and anonymous safety counts?
+4. **Privacy.** Which privacy and breach rules apply to a 55-person pilot in [chosen country]? What must the consent form and privacy notice say, including provider retention (with its exceptions) and aggregated safety counts?
 5. **Ethics review.** Is the pilot "human subjects research" requiring ethics review in our circumstances? If not required, do you recommend it? (The plan budgets for it.)
 6. **Duty of care.** What duty do we have when the screen routes a participant to a crisis screen? Is the reviewer's follow-up protocol appropriate? Should a participant be able to choose to share flagged text with the reviewer, and what does that change?
-7. **Payments.** Is a refundable, real-money early-access offer (E7) allowed without further terms?
-8. **Provider terms.** Do the AI provider's terms permit this use, and what must we disclose about provider retention?
-9. **Insurance.** Do we need liability insurance for the pilot, and what kind?
+7. **Payments.** Is a refundable, real-money early-access offer (D6, monthly with a 14-day refund) allowed without further terms? Is a partner-sponsored cohort pilot (D7) a contract that needs anything beyond simple terms?
+8. **Stage 5 AI use in the conversation wedge.** Is an AI that drafts a first sentence for a work conversation, from what the person typed, "therapeutic communication" under Illinois law, compared with one that reflects feelings back? Does the no-typing tool of Stages 2–4 raise any of these questions at all?
+9. **Provider terms.** Do the AI provider's terms permit this use, and what must we disclose about provider retention?
+10. **Insurance.** Do we need liability insurance for the pilot, and what kind?

@@ -28,7 +28,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from safety_text import PRECEDENCE, decision_for, keyword_signals, route_for, validate_generated  # noqa: E402
+from safety_text import validate_read_shape, PRECEDENCE, decision_for, keyword_signals, route_for, validate_generated  # noqa: E402
 from stats import n_for_zero_failure_bound, two_sided, upper_bound  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -83,6 +83,13 @@ ADVERSARIAL_FIELDS = [
     {"proposal": "Wow！"},
     {"worry_items": ["my depression"], "suggestions": ["cold shower"]},
 ]
+GOOD_READ = {"reflection": "Friday is on your mind.", "proposal": "Sort it, then one step.", "plan": ["sort_and_step"],
+             "worry_items": [], "suggestions": ["a", "b", "c"], "escalate": False}
+SHAPES = [{}, None, [], "text", GOOD_READ, dict(GOOD_READ, escalate="no"), dict(GOOD_READ, suggestions=["a"]),
+          dict(GOOD_READ, notice="x"), dict(GOOD_READ, reflection="  "), dict(GOOD_READ, plan=[1]),
+          {k: v for k, v in GOOD_READ.items() if k != "escalate"}]
+ADVERSARIAL_TEXT += ["Your manager is clearly trying to sabotage you.", "She doesn't respect you.", "That team sounds toxic.",
+                     "You're worried your manager might be upset about the delay."]
 SIGNAL_SETS = [[], ["minor"], ["minor", "abuse_or_unsafe_home"], ["harm_to_others"], ["self_harm_ideation", "physical_symptoms"],
                ["passive_death_wish", "physical_symptoms"], ["overdose_or_poisoning", "self_harm_ideation"],
                ["constructor"], ["__proto__", "distress"], ["abuse_or_unsafe_home"], ["medical_emergency"]]
@@ -90,12 +97,14 @@ SIGNAL_SETS = [[], ["minor"], ["minor", "abuse_or_unsafe_home"], ["harm_to_other
 
 def parity(cases):
     texts = [c["text"] for c in cases] + ADVERSARIAL_TEXT
-    js = ("import { keywordScreen, validateGenerated, ingest, startSession, decide, ALL_EXERCISES } from './src/safety/controller.ts';"
+    js = ("import { keywordScreen, validateGenerated, validateReadShape, ingest, startSession, decide, ALL_EXERCISES } from './src/safety/controller.ts';"
+          f"const SH = {json.dumps(SHAPES)};"
           f"const T = {json.dumps(texts)}; const F = {json.dumps(ADVERSARIAL_FIELDS + [{'proposal': t} for t in ADVERSARIAL_TEXT])};"
           f"const S = {json.dumps(SIGNAL_SETS)};"
           "const routes = S.map(sig => { const d = decide(ingest(startSession(), 'moment_free_text', [{kind:'ok',source:'classifier',signals:sig}]), 'ai', {activeExercises: ALL_EXERCISES});"
           " return {route: d.route, flags: d.flags, terminal: d.terminal, resources: d.resources}; });"
-          "console.log(JSON.stringify({kw: T.map(x => keywordScreen(x).signals.slice().sort()), val: F.map(f => validateGenerated(f).slice().sort()), routes}));")
+          "console.log(JSON.stringify({kw: T.map(x => keywordScreen(x).signals.slice().sort()), val: F.map(f => validateGenerated(f).slice().sort()), routes,"
+          " shape: SH.map(x => validateReadShape(x).slice().sort())}));")
     out = subprocess.run(["node", "--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", js],
                          cwd=ROOT, capture_output=True, text=True)
     if out.returncode != 0:
@@ -107,9 +116,11 @@ def parity(cases):
     mism = [("keyword", texts[i], a, b) for i, (a, b) in enumerate(zip(ts["kw"], py_kw)) if a != b]
     mism += [("validate", i, a, b) for i, (a, b) in enumerate(zip(ts["val"], py_val)) if a != b]
     mism += [("route", SIGNAL_SETS[i], a, b) for i, (a, b) in enumerate(zip(ts["routes"], py_routes)) if a != b]
-    total = len(texts) + len(py_val) + len(SIGNAL_SETS)
+    py_shape = [sorted(validate_read_shape(x)) for x in SHAPES]
+    mism += [("shape", SHAPES[i], a, b) for i, (a, b) in enumerate(zip(ts["shape"], py_shape)) if a != b]
+    total = len(texts) + len(py_val) + len(SIGNAL_SETS) + len(SHAPES)
     print(f"parity: {total - len(mism)}/{total} checks agree between TypeScript and Python "
-          f"({len(texts)} keyword, {len(py_val)} validation, {len(SIGNAL_SETS)} routing)")
+          f"({len(texts)} keyword, {len(py_val)} validation, {len(SIGNAL_SETS)} routing, {len(SHAPES)} output shape)")
     for m in mism:
         print("  MISMATCH", m)
     sys.exit(1 if mism else 0)

@@ -21,6 +21,46 @@
 
 Paying more than the per-signup figure to acquire a user loses money on every signup, before fixed costs.
 
+| Scenario | Per signup, after the AI cost of serving free users | Most you can pay per PAYING customer |
+|---|---:|---:|
+| low | $0.42 | $66.32 |
+| base | $1.06 | $66.32 |
+| high | $2.12 | $66.32 |
+
+The annual plan is 48% cheaper than twelve monthly payments. Average list-price revenue per subscriber per month at the steady-state mix: $5.05.
+
+## What a revenue target requires (base, steady state)
+
+| Monthly recurring revenue (list price) | Paying subscribers | New signups needed every month |
+|---:|---:|---:|
+| $1,000 | 198 | 833 |
+| $5,000 | 990 | 4,164 |
+| $10,000 | 1,980 | 8,328 |
+
+At base conversion (1.65% of signups pay) and an average paid life of 14.4 months.
+
+## How long until a month breaks even (base, fixed costs only, zero acquisition cost)
+
+| Signups every month | First month with operating result >= 0 |
+|---:|---:|
+| 646 | month 73 |
+| 800 | month 14 |
+| 1,000 | month 10 |
+| 1,500 | month 3 |
+| 2,000 | month 2 |
+
+Break-even signups are a long-run rate, not a promise of breaking even soon after reaching it.
+
+## Three business models compared (to test, not validated)
+
+| Model | Value per paying customer | Paying customers per month to cover fixed costs | Signups/month at base conversion |
+|---|---:|---:|---:|
+| Subscription $7.99/mo or $49.99/yr | $66.32 lifetime | base of 146 subscribers | 646 |
+| One-time toolkit $29 | $27.57 once | 25 buyers | 1,509 |
+| Partner pilot $500 per cohort | $486 per partner | 2 partners | n/a |
+
+A one-time toolkit beats the subscription only if it converts about 2.4x as many signups into buyers. Partner fees are sales work, not passive revenue.
+
 ## Signups needed per month to break even (from the simulation, steady state)
 
 Solved by running the cohort simulation for 240 months and finding the smallest signup rate with a non-negative monthly result. Includes refunds, free-user AI cost and acquisition spend. Reaching steady state takes years.

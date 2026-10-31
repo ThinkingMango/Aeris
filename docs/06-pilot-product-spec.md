@@ -1,17 +1,93 @@
-# 06 — Pilot Product Specification
+# 06 — Product Specification
 
-**Scope.** The product used in experiments E3 (prototype) and E4 (pilot). One situation, three exercises, two arms, about 12 screens. This is deliberately small. Everything not listed here is out of scope until the gates in [04](04-hypotheses-and-experiments.md) pass.
+**Two products, in order.**
+- **Part A, the no-typing conversation reset**, is what Stages 2–4 test ([04](04-hypotheses-and-experiments.md)): a clickable prototype in Stage 2, a live mobile web app in Stage 3, paid in Stage 4.
+- **Part B, the free-text, two-arm pilot**, is Stage 5. It is built only if Stages 1–4 pass.
 
-**Positioning.** A stress-management tool for stressful moments at work (E-REG-01). Not therapy, not treatment, not a diagnosis, not for emergencies. Every word on every screen follows the language rules in [10](10-regulatory.md) §5.
+Everything not listed here is out of scope until its gate passes.
+
+**Positioning.** A short, private tool for a specific stressful work moment (E-REG-01). Not therapy, not treatment, not a diagnosis, not for emergencies, and not a "wellbeing companion". Every word on every screen follows the language rules in [10](10-regulatory.md) §5.
 
 ---
 
+# Part A — The three-minute reset before a difficult conversation (Stages 2–4)
+
 ## 1. Who and when
 
-- **User.** An adult, 18 or over, with ordinary work-related worry: something tomorrow, replaying something that happened, too much at once.
-- **Moment.** Phone in hand, between tasks, or at night before a work day. The target is under 20 seconds from opening the app to the first exercise step (E3).
+- **User.** An adult who manages others and has a difficult work conversation coming up: giving hard feedback, asking for something, responding to criticism, or saying no.
+- **Moment.** Minutes to hours before the conversation, phone in hand.
+- **Outcome.** A calmer start and **one concrete thing to do or say first**.
+- **Target.** Under 3 minutes from opening the app to a chosen first step, with no typing. D3 measures it against each person's own current method.
 
-## 2. The three exercises
+## 2. Design rules
+
+1. **No typing anywhere.** Every input is a tap. Nothing a person chooses is sent to a server, except an optional anonymous category count for pilot measurement.
+2. **Lead with the useful output**: sort what you control, then choose a first step. Breathing is optional, offered, never forced.
+3. **Help before an account.** Anyone can use it as a guest. Pilot members may add an email to receive one weekly question.
+4. **User in control.** Every screen can be skipped. "Stop" is always visible. "Something else" is always available.
+5. **No pushing.** No streaks, badges, notifications or celebration. The next step is saved privately on the device and can be deleted.
+6. **Honest about limits.** The tool helps with preparing; it cannot fix how someone is being treated. A visible link says so, and points to real help (§3, A6).
+7. **Help is one tap away.** "In danger? Get help now" is on every screen. "This is about more than work" leads to the support screen.
+
+## 3. Flow and draft copy (for the reviewer)
+
+```
+A1 Home: "A difficult conversation ahead?"  [Start the 3-minute reset]   (link: Breathe first, 1 minute)
+ ─► A2 "What kind of conversation?"
+        [Giving hard feedback] [Asking for something] [Responding to criticism] [Saying no] [Something else]
+ ─► A3 "What's weighing on you most?" (pick up to 2, or skip)
+        [How they'll react] [Saying it badly] [Not sure what I want] [It feels unfair] [What it means for my job]
+ ─► A4 Sort: "Which of these can you control?"  pre-written cards for that conversation type, tap to sort
+        into "Mine" / "Not mine"
+ ─► A5 One first step: choose one of 3 reviewed options for that conversation type, e.g.
+        "Write your first sentence" (3 opener templates to pick from), "Pick your one example",
+        "Decide what you'd like them to do next", "Ask for 15 minutes instead of raising it in passing"
+ ─► (optional) A6b one minute of long-exhale breathing
+ ─► A7 Done: the chosen step on a quiet card; [Save on this phone] [Done]; optional "Did this help you prepare?"
+        (Yes / A bit / No, nothing pre-selected)
+
+Always: footer "In danger? Get help now" ─► support screen
+        link "This is about more than work" ─► A6 limits screen
+```
+
+| ID | Screen | Draft copy and content |
+|---|---|---|
+| A1 | Home | "A difficult conversation ahead?" Primary: "Start the 3-minute reset". Small link: "Breathe first (1 minute)". Line: "Private. Nothing you choose leaves this phone." |
+| A2 | Type | Five large buttons. "Something else" leads to a general version of A4 |
+| A3 | Weight | Up to two choices, or "Skip". The choices shape the cards on A4: "How they'll react" brings "How they react" and "What I say first" to the top |
+| A4 | Sort | 4–6 cards per conversation type. Example, giving hard feedback. **Mine:** "My first sentence", "One clear example", "What I'd like to happen next", "When and where we talk". **Not mine:** "How they react", "Whether they agree today". The reviewer approves every card |
+| A5 | First step | Three reviewed options per type. Opener templates have fill-in brackets the person completes **in their head or on paper**, for example "I'd like to talk about [the report]. I want to be straightforward because I think you can fix it." Copy to clipboard is allowed; typing in the app is not |
+| A6 | Limits ("This is about more than work") | "This tool helps you prepare. It can't fix how you're being treated. If you're facing bullying, discrimination or an unsafe workload, these can help: [workplace advice line], [union or employee assistance, if available], [employment-law help]. If you're not safe, get help now." Country-specific links, verified before launch |
+| A6b | Breathing (optional) | One minute of long-exhale breathing, as in B2 |
+| A7 | Done | "Your first step:" plus the chosen option. "Save on this phone" stores only the option's ID locally. "Delete" removes it |
+| — | Support screen | Emergency number, crisis line, and abuse line for the pilot country. Reviewed. Reached from every screen |
+
+**Why no typing, given that typing would personalise.** Typing is where the risk and the cost live. It needs crisis screening (E5), a classifier, and a privacy notice about provider retention, and in Illinois it may shade into "therapeutic communication" (E-REG-02). A no-typing tool removes all of that. If people still find it useful, that is the strongest possible result. If they say "it's too generic", that is the evidence for Stage 5.
+
+**What is weaker than a chatbot, stated plainly.** Pre-written cards cannot know the person's situation. A general chatbot with five minutes of typing can be more specific. Aeris bets that three minutes with no typing, a reviewed structure and privacy beat that **for this moment**. D3 tests the bet against the person's real alternative.
+
+## 4. What is stored (Stages 3–4)
+
+| Data | Where | Note |
+|---|---|---|
+| Chosen step | The device only | Deleted by the person, or by clearing the app |
+| Pilot email (optional), consents, country and region | Supabase, `profiles` and `consents` | Consent is to the document versions in force (N36) |
+| Session counts: conversation type, completed, optional rating | Supabase, `sessions`, `exercise_runs` and `feedback` | No card choices, no opener text. Situation values `conv_*`; the whole reset is one exercise, `conversation_reset`, which the reviewer activates like any other (P15) |
+| Weekly answer: number of difficult conversations | Supabase, or the email tool | A number only |
+| Page counters on the landing page | Analytics with no identifiers | Visitor → tried → joined, kept as separate counts |
+
+---
+
+# Part B — The free-text, two-arm pilot (Stage 5 only)
+
+**Scope.** The product used in experiments E5 and E4. One situation family, three exercises, two arms, about 12 screens. Built only after Stages 1–4 pass. In the conversation wedge, Part B adds a free-text box at A3 and an AI-drafted first sentence at A5. The screens below show the general work-worry version they were designed for; adapt the situations to whatever segment Stages 1–4 validated.
+
+## B1. Who and when
+
+- **User.** An adult, 18 or over, with ordinary work-related worry: something tomorrow, replaying something that happened, too much at once.
+- **Moment.** Phone in hand, between tasks, or at night before a work day. The target is under 20 seconds from opening the app to the first exercise step (D3).
+
+## B2. The three exercises
 
 All three are inactive in the database until the qualified reviewer approves the final script with a real name and date (tests N24, N28). The app offers only exercises the database reports active (controller test "no exercise is offered until the database reports it active"), and the database refuses to log an inactive one (N27). Wording below is draft.
 
@@ -23,7 +99,7 @@ All three are inactive in the database until the qualified reviewer approves the
 
 No cold-water, ice, or other discomfort-based exercise exists in any mode (E-SAF-02).
 
-## 3. Flow
+## B3. Flow
 
 ```
 Open app
@@ -40,7 +116,7 @@ Open app
 
 The tension score is **optional** and asked only once, before the plan. There is no after-score in the pilot, because a before/after pair invites the person to report improvement (A32). The database has no after-score column (test N32).
 
-## 4. The two arms
+## B4. The two arms
 
 Everything is identical except the rows marked **differs**.
 
@@ -64,7 +140,7 @@ Everything is identical except the rows marked **differs**.
 | Too much at once | breathing, then sort_and_step | sort_and_step |
 | Something else | breathing | grounding |
 
-## 5. Screens and copy (draft, for the reviewer)
+## B5. Screens and copy (draft, for the reviewer)
 
 | ID | Screen | Draft copy |
 |---|---|---|
@@ -82,7 +158,7 @@ Everything is identical except the rows marked **differs**.
 | S11 | Crisis screens | One per route; content in [07](07-safety-spec.md) §3. The resources shown come from the controller's `resources` list, so co-occurring risks (a minor who is also unsafe at home) show everything required. The abuse screen's quick exit uses `location.replace` so Back does not return ([07](07-safety-spec.md) §8) |
 | S12 | Settings | Country and region, delete my account and data, privacy notice, about the pilot, help line. Emails (sign-in link, weekly survey) use a neutral sender and subjects that do not mention stress or safety |
 
-## 6. Look and feel
+## B6. Look and feel
 
 Calm visual design is necessary but is **not** a differentiator; every competitor has one.
 
@@ -104,6 +180,6 @@ Calm visual design is necessary but is **not** a differentiator; every competito
 
 **Rules.** No red anywhere. Touch targets at least 48 pixels, 56 preferred. Body text 18 pixels on mobile. Respect the phone's reduce-motion setting. Meaning is never carried by colour alone: zones also have labels and icons.
 
-## 7. Explicitly out of scope for the pilot
+## B7. Explicitly out of scope for the pilot
 
 Payments; push notifications and daily check-ins; history and pattern screens; weekly reflections; multi-turn chat; voice; streaks or badges; sharing; any feature that remembers past conversations. Several of these could pull the product toward the "AI companion" definitions in New York and California law (E-REG-03, E-REG-04). If patterns are ever added, they must use association language such as "sessions with this exercise were rated more helpful". They must never use causal language such as "this works best for you", because the data cannot support it (A4).

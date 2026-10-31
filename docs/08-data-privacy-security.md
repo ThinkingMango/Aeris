@@ -9,13 +9,15 @@
 | Data | Where it lives | Who can read it | Kept for | On account deletion |
 |---|---|---|---|---|
 | Text the person types (worries, next steps) | **On the device only**, held in memory and cleared at session end; stored on the device only if the person chooses to save it | The person | Until session end, or until they delete what they saved | App clears device storage |
-| The same text, during screening and AI generation | Passes through Aeris's server function and the AI provider; **not written to Aeris's database or logs** | The AI provider, under its policy | Up to 30 days at the provider (E-SEC-05) | Cannot be recalled from the provider; the notice must say so |
-| Situation chosen, optional tension score, exercises run, completion, feedback score | Aeris database, `public.sessions`, `exercise_runs`, `feedback` | The person (row level security); the server | Pilot plus 90 days, then deleted or fully anonymised | Deleted (test D01) |
+| The same text, during screening and AI generation (**Stage 5 only**; Stages 1–4 have no typing) | Passes through Aeris's server function and the AI provider; **not written to Aeris's database or logs** | The AI provider, under its terms for the chosen endpoint and agreement | By default up to 30 days at the provider, **longer in stated exceptions** such as flagged policy violations or legal holds (E-SEC-05) | Cannot be recalled from the provider; the notice must say so, without promising unconditional deletion |
+| Situation or conversation type chosen, optional tension score, exercises run, completion, feedback | Aeris database, `public.sessions`, `exercise_runs`, `feedback` | The person (row level security); the server | Pilot plus 90 days, then deleted or aggregated. Removing an identifier is **not** enough | Deleted (test D01) |
+| Stages 2–4 card choices and the chosen first step | **The device only** | The person | Until they delete it | Cleared with the app |
 | Invite list (email addresses invited to the pilot) | `app_private.invites` | Server only | Until enrolment closes, then deleted | Deleted at pilot end |
 | Country and region (for example `US-IL`) | `public.profiles` | The person; the server | Life of the account | Deleted |
 | Arm assignment and any region override (Illinois → scripted) | `app_private.assignments` | Server only; the person sees their current arm via `my_arm()` | As above | Deleted |
 | Consent records | `public.consents` | The person can read and add, never edit or delete; the server | Life of the account | Deleted with the account; there is nothing left to have consented about |
-| Safety events: route, categories, source, arm, **no text** | `app_private.safety_events` | Server and reviewer only | Pilot plus 1 year | `user_id` removed; becomes an anonymous count (test D02); the notice says so |
+| Safety events: route, categories, source, arm, **no text** | `app_private.safety_events` | Server and reviewer only | Pilot plus 1 year | **Rows deleted**; only a monthly count per route remains in `safety_event_counts` (test D02). A row with only the user ID removed would still be linkable through its timestamp and arm in a 55-person pilot ([03](03-review-log.md) F-E7) |
+| Reports of safety counts | `app_private.safety_summary()` | Server and reviewer only | — | Cells under 5 are suppressed (test D03) |
 | AI reservations and cost, by kind (`classify`, `generate`) | `app_private.ai_reservations`, `app_private.daily_budget` | Server only | 13 months | `user_id` removed |
 | Deletion proof | `app_private.deletion_log` | Server only | Indefinitely | Holds no identifier by design |
 | Email address | Supabase Auth | Server | Life of the account | Deleted |
@@ -25,7 +27,7 @@
 
 ## 2. Processors to name in the privacy notice
 
-Supabase (database and sign-in), Vercel (hosting), the AI provider chosen in [09](09-ai-and-models.md) (screening and AI arm), and the email provider (sign-in links, weekly survey). Stripe is added only if E7 runs. Each needs a signed data processing agreement.
+Supabase (database and sign-in), Vercel (hosting), the AI provider chosen in [09](09-ai-and-models.md) (screening and AI arm, Stage 5 only), and the email provider (sign-in links, weekly survey). Stripe is added only when D6 runs (Stage 4). Each needs a signed data processing agreement.
 
 ## 3. Who can do what (the permission matrix)
 
@@ -42,12 +44,20 @@ Enforced by `supabase/schema.sql` and checked by `supabase/tests/run_security_te
 | `my_arm()` | — | Execute | Execute |
 | Everything in `app_private` (invites, assignments, settings including the kill switch, budgets, reservations, safety events, deletion log, metrics, quota functions) | — | — | All |
 
-**Tested:** 60 checks under each Supabase default (E-SEC-04), including the catalogue checks:
+**Tested:** 71 checks under each Supabase default (E-SEC-04), including the catalogue checks:
 - A visitor can run no functions and read only exercises.
 - A signed-in user can run only `my_arm` and has no table-wide update anywhere.
 - Row level security is on for every public table.
 
-Seven planted holes are each caught: the five v1 holes, plus two the red team found in the first v2 draft. Those two were sessions without a consent check, and logging of unreviewed exercises.
+Eleven planted holes are each caught:
+- the five v1 holes;
+- two the red team found in the first v2 draft: sessions without a consent check, and logging of unreviewed exercises;
+- four from the third review: approval passing through a NULL date, consent to an outdated document version, deleted accounts leaving linkable event rows, and the AI arm on by default.
+
+Also enforced since the third review:
+- Consent must be to the document versions in force (`app_private.required_consents`; N36, P14).
+- A region must belong to the chosen country (N37), and is required where it changes the rules (N38). Both are **self-reported**, not verified location.
+- Exercise approval is tied to the content version (N34, N35, N39).
 
 ## 4. How to run the tests
 
@@ -61,7 +71,7 @@ npm run test:db:mutations
 
 The first starts a throwaway PostgreSQL 16 database, loads a small Supabase stand-in (`supabase/tests/supabase_shim.sql`), and runs every check twice. The second proves the checks are not vacuous.
 
-**Limit.** The stand-in imitates Supabase's roles; it is not Supabase. Before the pilot, apply the schema to a **Supabase branch database** and run the same checks there (phase 3, week 6).
+**Limit.** The stand-in imitates Supabase's roles; it is not Supabase. Before the pilot, apply the schema to a **Supabase branch database** and run the same checks there (Stage 3, week 5; again before Stage 5).
 
 ## 5. Threat model (short)
 
@@ -73,19 +83,19 @@ The first starts a throwaway PostgreSQL 16 database, loads a small Supabase stan
 | Strangers sign up and drain the AI budget | Open Supabase sign-up | Invite list; consent gate; per-user daily limits by kind | N25, N26, N29, N30 |
 | Cost blow-up | 20 parallel AI requests; real cost above estimate | Reserve-then-settle with row lock; per-user and daily caps **per kind**; settle records the real cost even above the cap, then refuses new calls | K01–K06 |
 | Generator spend starves safety screening | Budget exhausted | Separate classifier and generator budgets | K07 |
-| Modified client requests AI text on a crisis | Forged "normal" route | Server re-runs the controller on combined session text; never trusts the client ([07](07-safety-spec.md) §1) | Build task: server-function test in phase 3 |
-| Key leak | Service key in browser code | Service key only in server function secrets; never in the client | Code review in phase 3 |
+| Modified client requests AI text on a crisis | Forged "normal" route | Server re-runs the controller on combined session text; never trusts the client ([07](07-safety-spec.md) §1) | Build task: server-function test in Stage 5 |
+| Key leak | Service key in browser code | Service key only in server function secrets; never in the client | Security review before Stage 3, and again before Stage 5 |
 | Prompt injection via text | "Ignore your rules..." | Model chooses only from an enum; every output validated; controller decides routes | Bake-off; controller tests |
-| Provider outage | AI down | Scripted fallback; breathing works offline | Phase 3 dry run |
+| Provider outage | AI down | Scripted fallback; breathing works offline | Stage 5 dry run |
 | Data at rest on a lost phone | Device storage | Text minimal; "delete account" clears storage; optional device lock reminder | Manual |
 
 ## 6. Account deletion
 
 1. The person taps "Delete my account and data", then confirms.
 2. The app clears device storage.
-3. The server function deletes the auth user, which cascades to every user-owned row (test D01). Safety events lose their user link (test D02). An anonymous `deletion_log` row is written.
+3. The server function deletes the auth user, which cascades to every user-owned row (test D01). The user's safety events are folded into monthly counts by route and deleted (test D02). An anonymous `deletion_log` row is written.
 4. A confirmation email is sent.
-5. What remains, and the notice must say it: provider-side copies of text for up to 30 days, backups until they roll off, and anonymous safety counts.
+5. What remains, and the notice must say it: provider-side copies of any text sent in Stage 5, under the provider's retention terms and their exceptions; backups until they roll off; monthly counts of safety events by route, with small cells suppressed in any report.
 
 ## 7. Incident response
 

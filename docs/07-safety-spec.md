@@ -1,6 +1,25 @@
 # 07 — Safety Specification
 
-**Status.** The engineering design is implemented and tested: `src/safety/controller.ts`, 58 tests in `src/safety/controller.test.ts`, run with `npm run test:safety`. **Route content** is **DRAFT** until the qualified reviewer approves it. That covers the words, phone numbers, eligibility wording and adverse-event protocol. No real participant may use the product before that approval (gate G3 in [05](05-discovery-and-build-plan.md)).
+**Status.** The engineering design is implemented and tested: `src/safety/controller.ts`, 65 tests in `src/safety/controller.test.ts`, run with `npm run test:safety`. **Route content** is **DRAFT** until the qualified reviewer approves it. That covers the words, phone numbers, eligibility wording and adverse-event protocol.
+
+**Two safety baselines, by stage.**
+- **Stages 2–4 (no typing)** need only §0 below. The reviewer approves it before the Stage 3 live tool.
+- **Sections 1–10 apply to Stage 5**, when free text and AI are added. No participant may type free text before gate G5a ([05](05-discovery-and-build-plan.md)).
+
+## 0. The no-typing baseline (Stages 2–4)
+
+| Requirement | How |
+|---|---|
+| No free text anywhere | Every input is a tap. Nothing a person chooses leaves the phone, so there is nothing to screen and no classifier or E5 is needed |
+| Help on every screen | "In danger? Get help now" opens a reviewed support screen: emergency number, crisis line, abuse line for the pilot country, verified on each service's own website before launch |
+| A route for "this is not just work" | "This is about more than work" opens screen A6: the tool's limits, workplace-help links, and the support screen ([06](06-pilot-product-spec.md) §3) |
+| Reviewed content only | Every card, opener template and step is approved by the reviewer. In the database, approval is tied to the exercise's content version: changing the content withdraws approval (tests N35, N39), and a missing date can no longer pass (N34) |
+| AI off | `ai_arm_enabled` is false by default (N40). No generated text can be shown |
+| Eligibility | Adults 18 or over in the pilot country; the reviewer approves the wording |
+| Adverse events | A participant can report a problem from Settings. Any report of harm pauses the pilot until the reviewer has looked at it (§7) |
+| Protect people who may be monitored | Neutral email subjects; the chosen step is stored only on the device and can be deleted (§8) |
+
+**What this baseline cannot do.** It cannot notice that someone is in crisis; it can only make help easy to reach. That is acceptable only because the product invites no disclosure, and the reviewer must agree that it is.
 
 **What this document does not claim.** It does not claim Aeris is safe. It describes how safety decisions are made, how they are tested, and what the tests cannot show. Section 10 lists the limits plainly.
 
@@ -66,7 +85,7 @@ Triggers for `restricted`:
 
 ## 3. Crisis screens (DRAFT for the reviewer)
 
-Each route has its own first action. Phone numbers depend on the pilot country chosen in phase 0. Verify them on each service's own website before launch and every three months after. **Country is required before a session can start** (test N33); the schema no longer defaults to the US.
+Each route has its own first action. Phone numbers depend on the pilot country chosen in week 0. Verify them on each service's own website before launch and every three months after. **Country is required before a session can start** (test N33); the schema no longer defaults to the US.
 
 | Route | Headline | First button | Other content |
 |---|---|---|---|
@@ -91,7 +110,7 @@ All six are listed in `TEXT_INGRESS_POINTS`. Each must call `ingest` before the 
 | `session_note` | Reserved; not in the pilot |
 | `feedback_comment` | Reserved; not in the pilot |
 
-**Required before the pilot (phase 3 task):** an app-level test that fails if any text input does not call `ingest`. The current unit tests can prove the controller is correct. They cannot prove the app calls it. This gap is real until the app exists.
+**Required before Stage 5 (build task):** an app-level test that fails if any text input does not call `ingest`. The current unit tests can prove the controller is correct. They cannot prove the app calls it. This gap is real until the app exists.
 
 ## 5. The screening pipeline
 
@@ -99,7 +118,7 @@ All six are listed in `TEXT_INGRESS_POINTS`. Each must call `ingest` before the 
    - **Normalisation.** Text is Unicode-folded (NFKD), with accents and zero-width characters removed. Common Cyrillic and Greek look-alike letters are mapped to Latin ones. Punctuation, including `/`, becomes spaces. Phrases are matched on whole words.
    - **Leet forms.** A second pass maps "k1ll" to "kill", and so on. Age statements are matched **only** on the base pass, so "15 minutes late" cannot become an age.
    - **Ages.** Only explicit age statements count, such as "I'm 15 years old" or "I am 16 years old". Bare numbers and school years no longer end sessions. Teachers saying "my year 9 class" and shift workers saying "16 hours into this shift" were wrongly ejected in the first draft (tests: "no crisis keyword for ordinary work sentence…").
-2. **On the server, both arms: a classifier model.** It reads the session's combined text and returns signals. Aeris does **not store** the text. It does pass through the AI provider, which keeps it for up to 30 days under its standard policy (E-SEC-05); the privacy notice must say so.
+2. **On the server, both arms: a classifier model.** It reads the session's combined text and returns signals. Aeris does **not store** the text. It does pass through the AI provider, which keeps it under its terms for the chosen endpoint: by default up to 30 days, longer in stated exceptions (E-SEC-05). The privacy notice must say so without promising unconditional deletion.
 3. **The controller** combines both results and decides.
    - A classifier failure, a timeout over 2.5 seconds, or **no classifier result** each count as restricted.
    - The keyword screen alone can never keep a session on normal.
@@ -152,7 +171,7 @@ This is a real limit. It is one reason the pilot is small and short.
 3. Inform the reviewer the same day.
 4. Do not resume until the reviewer agrees on a fix.
 
-**Account deletion after a crisis.** Deletion turns safety events into anonymous counts (test D02). The reviewer's protocol must say what happens to a follow-up that is due when someone deletes their account. One option: a follow-up email at the time of the event, before any deletion.
+**Account deletion after a crisis.** Deletion folds the person's safety events into monthly counts by route and deletes the rows (test D02). Any report suppresses counts under 5 (D03). The reviewer's protocol must say what happens to a follow-up that is due when someone deletes their account. One option: a follow-up email at the time of the event, before any deletion.
 
 ## 8. Protecting people who may be monitored
 

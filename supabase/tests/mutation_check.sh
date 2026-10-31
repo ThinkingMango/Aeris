@@ -43,3 +43,21 @@ mutate "unreviewed exercises loggable (red-team A4)" \
 mutate "quota check without row lock (v1 race)" \
   "select * into v_b from app_private.daily_budget where day = v_day and kind = p_kind for update;" \
   "select * into v_b from app_private.daily_budget where day = v_day and kind = p_kind; perform pg_sleep(0.05);"
+mutate "approval passes through a NULL date (third review)" \
+  "  check (not is_active or coalesce(char_length(btrim(reviewed_by)) >= 3
+                                   and reviewed_at >= date '2026-01-01'
+                                   and reviewed_version = version, false))" \
+  "  check (not is_active or (char_length(btrim(reviewed_by)) >= 3
+                                   and reviewed_at >= date '2026-01-01'
+                                   and reviewed_version = version))"
+mutate "consent to an outdated document version accepted (third review)" \
+  "  where latest.granted and latest.version = r.version;" \
+  "  where latest.granted;"
+mutate "deleted accounts leave linkable safety-event rows (third review)" \
+  "  delete from app_private.safety_events where user_id = old.id;
+  return old;" \
+  "  update app_private.safety_events set user_id = null where user_id = old.id;
+  return old;"
+mutate "AI arm on by default before Stage 5 (third review)" \
+  "  ai_arm_enabled                 boolean not null default false," \
+  "  ai_arm_enabled                 boolean not null default true,"
