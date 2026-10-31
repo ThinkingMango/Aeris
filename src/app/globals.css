@@ -425,7 +425,8 @@ button:disabled {
   transition: background-color 300ms ease-out, transform 300ms ease-out;
 }
 
-.choice-button[aria-pressed="true"] {
+.choice-button[aria-pressed="true"],
+.choice-button[aria-checked="true"] {
   border-color: var(--accent);
 }
 
@@ -1077,6 +1078,64 @@ button:disabled {
 }
 
 .reset-content {
+  display: flex;
   flex: 1;
   min-height: 1px;
+  flex-direction: column;
+  padding: clamp(32px, 7vh, 64px) 0 24px;
+}
+
+.reset-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.reset-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.reset-actions-stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reset-actions-equal {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reset-actions .aeris-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+}
+
+.reset-choice-list,
+.reset-worry-list {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.reset-choice-list {
+  flex-direction: column;
+}
+
+.reset-navigation {
+  margin-top: 8px;
+}
+
+.saved-step-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 24px;
+}
+
+.saved-step-actions {
+  display: flex;
+  justify-content: flex-end;
 }

@@ -9,7 +9,7 @@ import {
   CaretDown,
   SlidersHorizontal,
 } from "@phosphor-icons/react";
-import { useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import { useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEventHandler, type ReactNode, type Ref } from "react";
 import resetContent from "../../content/reset_content.json";
 import { helplines } from "../../content/helplines";
 import {
@@ -43,16 +43,29 @@ export function ChoiceButton({
   children,
   selected = false,
   onClick,
+  role,
+  tabIndex,
+  onKeyDown,
+  ref,
 }: {
   children: ReactNode;
   selected?: boolean;
-  onClick?: () => void;
+  onClick?: ButtonHTMLAttributes<HTMLButtonElement>["onClick"];
+  role?: "radio";
+  tabIndex?: number;
+  onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
+  ref?: Ref<HTMLButtonElement>;
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       className="choice-button"
-      aria-pressed={selected}
+      role={role}
+      aria-pressed={role ? undefined : selected}
+      aria-checked={role === "radio" ? selected : undefined}
+      tabIndex={role ? tabIndex : undefined}
+      onKeyDown={onKeyDown}
       onClick={onClick}
     >
       <span>{children}</span>
