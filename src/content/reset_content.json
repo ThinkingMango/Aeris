@@ -1,0 +1,123 @@
+{
+  "_status": "DRAFT content for the no-typing conversation reset (docs/06 Part A). Revise after the Stage 1 interviews (docs/04 D1) so the cards use people's own words. The qualified reviewer approves every string before the Stage 3 live tool. Checked by src/content/content.test.ts. Used by the v0 prototype (docs/12 R0) and later by the Stage 3 app, so there is one source of truth.",
+  "version": "2026-11-01-draft",
+  "worries": [
+    { "id": "react", "label": "How they'll react" },
+    { "id": "say_badly", "label": "Saying it badly" },
+    { "id": "unsure_want", "label": "Not sure what I want" },
+    { "id": "unfair", "label": "It feels unfair" },
+    { "id": "job", "label": "What it means for my job" }
+  ],
+  "types": [
+    {
+      "id": "conv_feedback",
+      "label": "Giving hard feedback",
+      "cards": [
+        { "text": "My first sentence", "worries": ["say_badly"] },
+        { "text": "One clear example", "worries": ["say_badly", "unsure_want"] },
+        { "text": "What I'd like to happen next", "worries": ["unsure_want"] },
+        { "text": "When and where we talk", "worries": ["react"] },
+        { "text": "How they react", "worries": ["react", "job"] },
+        { "text": "Whether they agree today", "worries": ["react", "unfair"] }
+      ],
+      "steps": [
+        { "id": "opener", "title": "Choose your first sentence", "detail": "Pick one to start with. Fill in the brackets in your head." },
+        { "id": "example", "title": "Pick your one example", "detail": "One recent, specific example is clearer than five." },
+        { "id": "next", "title": "Decide what you'd like to happen next", "detail": "One change you'd like to see, and by when." }
+      ],
+      "openers": [
+        "I'd like to talk about [the report]. I want to be straightforward because I think you can fix it.",
+        "Can we take 15 minutes? I want to give you some feedback on [the project].",
+        "I noticed [what happened]. I'd like to understand what got in the way."
+      ]
+    },
+    {
+      "id": "conv_ask",
+      "label": "Asking for something",
+      "cards": [
+        { "text": "What exactly I'm asking for", "worries": ["unsure_want"] },
+        { "text": "Why it matters now", "worries": ["say_badly", "job"] },
+        { "text": "What I can offer in return", "worries": ["unsure_want"] },
+        { "text": "When I ask", "worries": ["react"] },
+        { "text": "Whether they say yes today", "worries": ["react", "job"] },
+        { "text": "Their budget or limits", "worries": ["unfair"] }
+      ],
+      "steps": [
+        { "id": "opener", "title": "Choose your first sentence", "detail": "Pick one to start with. Fill in the brackets in your head." },
+        { "id": "specific", "title": "Name one specific ask", "detail": "A number, a date or a decision. Specific is easier to say yes to." },
+        { "id": "not_now", "title": "Plan your answer to \"not now\"", "detail": "Decide in advance: \"Can we agree when to come back to it?\"" }
+      ],
+      "openers": [
+        "I'd like to ask for [more time on the launch]. Can I explain why?",
+        "I want to talk about [my workload]. I have a specific suggestion.",
+        "Before [the planning meeting], can we discuss [the extra help]?"
+      ]
+    },
+    {
+      "id": "conv_criticism",
+      "label": "Responding to criticism",
+      "cards": [
+        { "text": "Listening before I answer", "worries": ["react", "say_badly"] },
+        { "text": "Asking one clarifying question", "worries": ["unsure_want"] },
+        { "text": "Taking time before I reply", "worries": ["say_badly"] },
+        { "text": "What they think of me", "worries": ["react", "job"] },
+        { "text": "Whether it was fair", "worries": ["unfair"] },
+        { "text": "What they say first", "worries": ["react"] }
+      ],
+      "steps": [
+        { "id": "opener", "title": "Choose your first sentence", "detail": "Pick one to start with. Fill in the brackets in your head." },
+        { "id": "question", "title": "Prepare one clarifying question", "detail": "For example: \"Can you give me an example so I understand?\"" },
+        { "id": "time", "title": "Give yourself time", "detail": "It's fine to say: \"Let me think about that and come back to you tomorrow.\"" }
+      ],
+      "openers": [
+        "Thanks for telling me. Can you give me an example so I understand?",
+        "I want to get this right. What would good look like to you?",
+        "I hear you. I'd like to think about it and come back to you by [tomorrow]."
+      ]
+    },
+    {
+      "id": "conv_say_no",
+      "label": "Saying no",
+      "cards": [
+        { "text": "The words I use to say no", "worries": ["say_badly"] },
+        { "text": "What I can offer instead", "worries": ["unsure_want"] },
+        { "text": "When I tell them", "worries": ["react"] },
+        { "text": "Saying it once, clearly", "worries": ["say_badly"] },
+        { "text": "Whether they're disappointed", "worries": ["react", "job"] },
+        { "text": "What they decide to do next", "worries": ["react", "unfair"] }
+      ],
+      "steps": [
+        { "id": "opener", "title": "Choose your first sentence", "detail": "Pick one to start with. Fill in the brackets in your head." },
+        { "id": "alternative", "title": "Decide what you can offer instead", "detail": "A later date, a smaller version, or someone else who can help." },
+        { "id": "once", "title": "Say it once, then stop", "detail": "A clear no with one reason is enough. You don't need to over-explain." }
+      ],
+      "openers": [
+        "I can't take on [the new report] this week. I can do it by [the 20th].",
+        "I'd like to help, but I need to say no to [this]. What I can do is [that].",
+        "Thanks for thinking of me. I'm not able to [take this on] right now."
+      ]
+    },
+    {
+      "id": "conv_other",
+      "label": "Something else",
+      "cards": [
+        { "text": "What I want to come out of it", "worries": ["unsure_want"] },
+        { "text": "My first sentence", "worries": ["say_badly"] },
+        { "text": "When and where we talk", "worries": ["react"] },
+        { "text": "What I'll do if it goes badly", "worries": ["job"] },
+        { "text": "How they react", "worries": ["react"] },
+        { "text": "Things outside my control", "worries": ["unfair", "job"] }
+      ],
+      "steps": [
+        { "id": "opener", "title": "Choose your first sentence", "detail": "Pick one to start with. Fill in the brackets in your head." },
+        { "id": "goal", "title": "Decide your one goal", "detail": "Finish this sentence in your head: \"It goes well if...\"" },
+        { "id": "place", "title": "Pick a time and place", "detail": "Somewhere private, when neither of you is rushing." }
+      ],
+      "openers": [
+        "I'd like to talk about [this]. Is now a good time, or later today?",
+        "Can we find 15 minutes? There's something I want to discuss.",
+        "I want to be open with you about [this]."
+      ]
+    }
+  ]
+}

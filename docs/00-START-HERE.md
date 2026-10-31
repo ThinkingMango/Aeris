@@ -36,7 +36,7 @@ Everything checkable is checkable with one command. Node 22.6+, Python 3.10+, an
 
 | Claim | Command | Expected |
 |---|---|---|
-| The safety controller and output validation behave as specified, including every red-team probe | `npm run test:safety` | 65 passing |
+| The safety controller and output validation behave as specified, including every red-team probe; the reset's draft content has content for every conversation type and no banned words | `npm run test:safety` | 92 passing (65 controller, 27 content) |
 | The database blocks every attack from all three reviews, under both Supabase defaults | `npm run test:db` | ALL TESTS PASSED (71 checks × 2) |
 | Those database tests are not vacuous | `npm run test:db:mutations` | 11 of 11 planted holes caught |
 | Python and TypeScript apply identical text, validation, routing and output-shape rules | `python3 evals/classifier_eval.py --parity` | 120/120 agree |

@@ -21,13 +21,18 @@ Everything not listed here is out of scope until its gate passes.
 
 ## 2. Design rules
 
-1. **No typing anywhere.** Every input is a tap. Nothing a person chooses is sent to a server, except an optional anonymous category count for pilot measurement.
+1. **No typing anywhere.** Every input is a tap.
+   - **Stage 2 (prototype):** nothing at all is sent anywhere.
+   - **Stage 3 (pilot members):** only the conversation type, whether the reset was completed, and the optional rating are recorded, linked to the member's pilot account, because D5 measures reuse per person. That is **not anonymous**, and the screen says so (A1).
+   - Card choices, the chosen step and the opener never leave the phone.
+   - **All wording comes from one file**, `src/content/reset_content.json`. It is checked by `src/content/content.test.ts`: every type has content, lengths are checked, and there are no banned words or crisis language.
 2. **Lead with the useful output**: sort what you control, then choose a first step. Breathing is optional, offered, never forced.
 3. **Help before an account.** Anyone can use it as a guest. Pilot members may add an email to receive one weekly question.
 4. **User in control.** Every screen can be skipped. "Stop" is always visible. "Something else" is always available.
 5. **No pushing.** No streaks, badges, notifications or celebration. The next step is saved privately on the device and can be deleted.
 6. **Honest about limits.** The tool helps with preparing; it cannot fix how someone is being treated. A visible link says so, and points to real help (§3, A6).
-7. **Help is one tap away.** "In danger? Get help now" is on every screen. "This is about more than work" leads to the support screen.
+7. **Help is one tap away.** "In danger? Get help now" is on every screen and leads to the support screen. "This is about more than work" leads to the limits screen (A6), which links to the support screen.
+8. **Theme follows the phone's system setting**, with a manual toggle. The earlier "dark from 9 p.m." rule is dropped: it overrides what people chose and is a common source of web-app bugs.
 
 ## 3. Flow and draft copy (for the reviewer)
 
@@ -39,9 +44,9 @@ A1 Home: "A difficult conversation ahead?"  [Start the 3-minute reset]   (link: 
         [How they'll react] [Saying it badly] [Not sure what I want] [It feels unfair] [What it means for my job]
  ─► A4 Sort: "Which of these can you control?"  pre-written cards for that conversation type, tap to sort
         into "Mine" / "Not mine"
- ─► A5 One first step: choose one of 3 reviewed options for that conversation type, e.g.
-        "Write your first sentence" (3 opener templates to pick from), "Pick your one example",
-        "Decide what you'd like them to do next", "Ask for 15 minutes instead of raising it in passing"
+ ─► A5 One first step: choose one of 3 reviewed options for that conversation type (src/content/reset_content.json),
+        always starting with "Choose your first sentence" (3 opener templates to pick from), e.g. for
+        feedback: "Pick your one example", "Decide what you'd like to happen next"
  ─► (optional) A6b one minute of long-exhale breathing
  ─► A7 Done: the chosen step on a quiet card; [Save on this phone] [Done]; optional "Did this help you prepare?"
         (Yes / A bit / No, nothing pre-selected)
@@ -52,15 +57,15 @@ Always: footer "In danger? Get help now" ─► support screen
 
 | ID | Screen | Draft copy and content |
 |---|---|---|
-| A1 | Home | "A difficult conversation ahead?" Primary: "Start the 3-minute reset". Small link: "Breathe first (1 minute)". Line: "Private. Nothing you choose leaves this phone." |
+| A1 | Home | "A difficult conversation ahead?" Primary: "Start the 3-minute reset". Small link: "Breathe first (1 minute)". Line, Stage 2: "Private. What you choose stays on this phone." Line, Stage 3 for pilot members: "What you choose stays on this phone. For the pilot we record how often you use it and the type of conversation, never your choices." If a step was saved, it is shown here with "Delete" |
 | A2 | Type | Five large buttons. "Something else" leads to a general version of A4 |
 | A3 | Weight | Up to two choices, or "Skip". The choices shape the cards on A4: "How they'll react" brings "How they react" and "What I say first" to the top |
 | A4 | Sort | 4–6 cards per conversation type. Example, giving hard feedback. **Mine:** "My first sentence", "One clear example", "What I'd like to happen next", "When and where we talk". **Not mine:** "How they react", "Whether they agree today". The reviewer approves every card |
-| A5 | First step | Three reviewed options per type. Opener templates have fill-in brackets the person completes **in their head or on paper**, for example "I'd like to talk about [the report]. I want to be straightforward because I think you can fix it." Copy to clipboard is allowed; typing in the app is not |
+| A5 | First step | Three reviewed options per type, from the content file; the first is always "Choose your first sentence". Opener templates have fill-in brackets the person completes **in their head or on paper**, for example "I'd like to talk about [the report]. I want to be straightforward because I think you can fix it." Copy to clipboard is allowed; typing in the app is not |
 | A6 | Limits ("This is about more than work") | "This tool helps you prepare. It can't fix how you're being treated. If you're facing bullying, discrimination or an unsafe workload, these can help: [workplace advice line], [union or employee assistance, if available], [employment-law help]. If you're not safe, get help now." Country-specific links, verified before launch |
 | A6b | Breathing (optional) | One minute of long-exhale breathing, as in B2 |
-| A7 | Done | "Your first step:" plus the chosen option. "Save on this phone" stores only the option's ID locally. "Delete" removes it |
-| — | Support screen | Emergency number, crisis line, and abuse line for the pilot country. Reviewed. Reached from every screen |
+| A7 | Done | "Your first step:" plus the chosen option. "Save on this phone" stores only the option's ID (and the opener's index) locally. "Delete", shown on A1, removes it. The optional "Did this help you prepare?" answer: in Stage 2 it stays in memory only; in Stage 3 it is recorded for pilot members |
+| — | Support screen | Emergency number, crisis line, and abuse line for the pilot country. Reached from every screen. **Placeholder numbers can never be dialled**: the button is disabled until a real number is set. Before any real person uses even the prototype (D3), the founder replaces every placeholder with numbers verified on each service's own website. The reviewer re-checks them before Stage 3 |
 
 **Why no typing, given that typing would personalise.** Typing is where the risk and the cost live. It needs crisis screening (E5), a classifier, and a privacy notice about provider retention, and in Illinois it may shade into "therapeutic communication" (E-REG-02). A no-typing tool removes all of that. If people still find it useful, that is the strongest possible result. If they say "it's too generic", that is the evidence for Stage 5.
 
@@ -72,7 +77,7 @@ Always: footer "In danger? Get help now" ─► support screen
 |---|---|---|
 | Chosen step | The device only | Deleted by the person, or by clearing the app |
 | Pilot email (optional), consents, country and region | Supabase, `profiles` and `consents` | Consent is to the document versions in force (N36) |
-| Session counts: conversation type, completed, optional rating | Supabase, `sessions`, `exercise_runs` and `feedback` | No card choices, no opener text. Situation values `conv_*`; the whole reset is one exercise, `conversation_reset`, which the reviewer activates like any other (P15) |
+| Session counts: conversation type, completed, optional rating | Supabase, `sessions`, `exercise_runs` and `feedback`, **linked to the pilot account** (not anonymous; A1 says so) | No card choices, no opener text. Situation values `conv_*`; the whole reset is one exercise, `conversation_reset`, which the reviewer activates like any other (P15) |
 | Weekly answer: number of difficult conversations | Supabase, or the email tool | A number only |
 | Page counters on the landing page | Analytics with no identifiers | Visitor → tried → joined, kept as separate counts |
 
@@ -176,7 +181,7 @@ Calm visual design is necessary but is **not** a differentiator; every competito
 | `sage-tint` | #8FA98F | **Decoration only** (fills behind text, never text or a lone indicator) | 2.30:1, not for text or UI boundaries |
 | `clay-tint` | #C9A18A | **Decoration only** | 2.12:1, not for text or UI boundaries |
 
-**Dark theme.** The v1 dark tokens already passed (ink 14.27:1, ink-soft 6.67:1, sage 8.64:1, clay 7.71:1, button text 7.97:1). Switch automatically between 9 p.m. and 6 a.m. unless the user chooses.
+**Dark theme.** The v1 dark tokens already passed (ink 14.27:1, ink-soft 6.67:1, sage 8.64:1, clay 7.71:1, button text 7.97:1). Follow the phone's system setting, with a manual toggle.
 
 **Rules.** No red anywhere. Touch targets at least 48 pixels, 56 preferred. Body text 18 pixels on mobile. Respect the phone's reduce-motion setting. Meaning is never carried by colour alone: zones also have labels and icons.
 

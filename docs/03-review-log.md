@@ -272,3 +272,33 @@ Short, tap-first sessions; optional typing; a small fixed exercise library; a gu
 | F-O3 | Months to break-even in the model, which shows that the "646 signups" headline was misleading on its own | `models/cohort_model.py` |
 
 **What this review changed about the plan, in one sentence.** The question is no longer "is the safety programme rigorous?", because it largely is. It is "has anyone shown they want this enough to come back and pay?". No one has yet, so that is what the money now buys first.
+
+---
+
+## Part G — Whole-plan consistency review before building the prototype (31 October 2026, own review)
+
+**Why.** The founder chose to build the Stage 2 prototype in v0. Before that, we reread the v0 prompts ([12](12-v0-prompts.md)) against the spec, the safety baseline, the privacy rules and the experiments. The goal was to find anything that would make the prototype wrong, unsafe or useless for D3.
+
+### Findings that would have broken the experiment or a rule
+
+| # | Finding | Severity | Fix |
+|---|---|---|---|
+| G1 | **The prompts gave content for only one of five conversation types.** D3 participants bring real conversations of any type, so v0 would have invented cards, steps and openers that nobody reviewed | Critical | One draft content file, `src/content/reset_content.json`, covers all five types. Its 27 tests check that every type in the database has content, that each A3 worry brings at least one card forward, length limits, balanced brackets, no typing implied, and no banned terms or crisis language (`src/content/content.test.ts`). v0 is told never to invent or reword content (R0, rule 3) |
+| G2 | **Fake help-line numbers could reach real participants.** The prompts used tel: links with placeholders, and D3 involves real people | Critical | The SupportButton refuses to dial a placeholder. Real numbers, verified by the founder on each service's own site, are required before the first D3 session. The reviewer re-checks them before Stage 3 ([05](05-discovery-and-build-plan.md), [07](07-safety-spec.md) §0) |
+| G3 | **"Nothing you choose leaves this phone" could be made false** by site-wide analytics, by choices encoded in URLs, or by Stage 3 recording the conversation type | High | The reset is one route with in-page state; analytics only on the landing page and the first load of `/reset` (R1, R5, rule 2). In Stage 3 the A1 line changes to say exactly what is recorded, and that it is linked to the pilot account and **not anonymous**. The earlier wording in [06](06-pilot-product-spec.md) §2, "optional anonymous category count", was wrong and is corrected |
+| G4 | **The landing page collected email addresses** with no privacy notice, no 18+ confirmation and no defined destination, in Stage 2, before any lawyer review | High | R5 adds a required 18+ checkbox, a plain privacy page, a server action to one email list whose key lives only in Vercel's settings, and nothing else collected. The landing page is built only for D4 |
+
+### Findings that would have caused drift or rework
+
+| # | Finding | Fix |
+|---|---|---|
+| G5 | P0 described the old positioning ("stress-management tool") and Stage 5 components: a three-zone SortBoard, a 1–5 RatingRow and a DisclosureLine. v0 would have reused them in the two-zone, no-AI reset | P0 is rewritten for the reset. Stage 5 components are moved to a separate P0b |
+| G6 | Rules were a single line "to repeat whenever it drifts" | A 12-rule block for v0's project instructions (or first message), and a self-audit prompt R6 that names the most likely violations |
+| G7 | Dragging cards between zones is fiddly on phones and hard for screen-reader and keyboard users | Each card has two clear buttons, "Mine" and "Not mine". Dragging is not required |
+| G8 | Undefined behaviour: where "Stop" goes, how to go back, what happens after breathing, how a saved step is seen or deleted, how "Something else" works, how A3 reorders A4 | Each is defined in R1–R4. The A3→A4 ordering uses the `worries` tags in the content file |
+| G9 | The theme switched to dark by time of day, overriding the phone's setting | The theme follows the system setting, with a manual toggle ([06](06-pilot-product-spec.md) §2 rule 8, B6) |
+| G10 | Spec inconsistencies: "This is about more than work" was said to lead to both the support screen and the limits screen; A5 listed four options but said three | Fixed in [06](06-pilot-product-spec.md): it leads to the limits screen, which links to support; three options per type, from the content file |
+| G11 | The Stage 5 settings copy in P8 still said "anonymous counts" and "provider copies up to 30 days" | Updated to match [08](08-data-privacy-security.md): monthly counts; provider retention with its exceptions |
+| G12 | A content-writing task was missing from the plan. The cards should use the words D1 interviewees actually used | Added to Stage 2 in [05](05-discovery-and-build-plan.md): revise the content file after D1, then rerun the tests |
+
+**Still not checked by any test.** Whether v0's generated code obeys the rules. Only the content file is tested today. When the v0 code is pushed to a branch, the review step in [05](05-discovery-and-build-plan.md) Stage 2 should add browser tests for rules 1, 2, 4, 5, 6, 9 and 10.

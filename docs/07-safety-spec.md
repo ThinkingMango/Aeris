@@ -1,6 +1,6 @@
 # 07 — Safety Specification
 
-**Status.** The engineering design is implemented and tested: `src/safety/controller.ts`, 65 tests in `src/safety/controller.test.ts`, run with `npm run test:safety`. **Route content** is **DRAFT** until the qualified reviewer approves it. That covers the words, phone numbers, eligibility wording and adverse-event protocol.
+**Status.** The engineering design is implemented and tested: `src/safety/controller.ts`, 65 tests in `src/safety/controller.test.ts`, plus 27 checks on the reset's content (`src/content/content.test.ts`), run with `npm run test:safety`. **Route content** is **DRAFT** until the qualified reviewer approves it. That covers the words, phone numbers, eligibility wording and adverse-event protocol.
 
 **Two safety baselines, by stage.**
 - **Stages 2–4 (no typing)** need only §0 below. The reviewer approves it before the Stage 3 live tool.
@@ -11,7 +11,8 @@
 | Requirement | How |
 |---|---|
 | No free text anywhere | Every input is a tap. Nothing a person chooses leaves the phone, so there is nothing to screen and no classifier or E5 is needed |
-| Help on every screen | "In danger? Get help now" opens a reviewed support screen: emergency number, crisis line, abuse line for the pilot country, verified on each service's own website before launch |
+| Help on every screen | "In danger? Get help now" opens a support screen with the emergency number, crisis line and abuse line for the pilot country. The founder verifies each on the service's own website before the first D3 session, and the reviewer re-checks them before Stage 3. The button is disabled while a number is still a placeholder, so a fake number can never be dialled |
+| Reviewed wording only | Every card, step and opener comes from `src/content/reset_content.json`. A test checks it for banned words, crisis language, exclamation marks and length (`src/content/content.test.ts`) |
 | A route for "this is not just work" | "This is about more than work" opens screen A6: the tool's limits, workplace-help links, and the support screen ([06](06-pilot-product-spec.md) §3) |
 | Reviewed content only | Every card, opener template and step is approved by the reviewer. In the database, approval is tied to the exercise's content version: changing the content withdraws approval (tests N35, N39), and a missing date can no longer pass (N34) |
 | AI off | `ai_arm_enabled` is false by default (N40). No generated text can be shown |
