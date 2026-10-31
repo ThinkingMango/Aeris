@@ -155,6 +155,29 @@ def lifetime_value_per_signup(sc):
     return per_paying, per_paying * sc["activation"] * sc["paid_conversion_of_activated"]
 
 
+def free_cost_per_signup(sc):
+    """Lifetime AI cost of serving one signup while free (activated users only)."""
+    s = A["free_active_share_by_month_since_signup"]
+    d = A["free_active_monthly_decay_after"]
+    lifetime_active_months = sum(s) + s[-1] * d / (1 - d)
+    per_session = A["ai_cost_per_session_usd"] * min(A["free_sessions_cap_per_month"], A["free_sessions_mean_when_active"])
+    return sc["activation"] * lifetime_active_months * per_session
+
+
+def gross_revenue_per_subscriber():
+    """Average list-price revenue per paying subscriber per month at the steady-state plan mix (before fees)."""
+    _, annual_share = steady_state_contribution()
+    return annual_share * A["price_annual_usd"] / 12 + (1 - annual_share) * A["price_monthly_usd"]
+
+
+def months_to_break_even(signups, sc, cac=0.0, horizon=240):
+    """First month whose operating result is >= 0 at a constant signup rate, or None."""
+    for r in simulate(dict(sc, signups_per_month=signups), months=horizon, cac=cac):
+        if r["operating"] >= 0:
+            return r["month"]
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--markdown", action="store_true")
@@ -180,6 +203,44 @@ def main():
         per_paying, per_signup = lifetime_value_per_signup(sc)
         print(f"| {name} | ${per_paying:.2f} | **${per_signup:.2f}** |")
     print("\nPaying more than the per-signup figure to acquire a user loses money on every signup, before fixed costs.")
+    print("\n| Scenario | Per signup, after the AI cost of serving free users | Most you can pay per PAYING customer |\n|---|---:|---:|")
+    for name, sc in A["scenarios"].items():
+        _, per_signup = lifetime_value_per_signup(sc)
+        conv = sc["activation"] * sc["paid_conversion_of_activated"]
+        print(f"| {name} | ${per_signup - free_cost_per_signup(sc):.2f} | ${per_signup / conv:.2f} |")
+    discount = 1 - A["price_annual_usd"] / (12 * A["price_monthly_usd"])
+    print(f"\nThe annual plan is {discount:.0%} cheaper than twelve monthly payments. Average list-price revenue per "
+          f"subscriber per month at the steady-state mix: ${gross_revenue_per_subscriber():.2f}.")
+
+    print("\n## What a revenue target requires (base, steady state)\n")
+    base = A["scenarios"]["base"]
+    conv = base["activation"] * base["paid_conversion_of_activated"]
+    print("| Monthly recurring revenue (list price) | Paying subscribers | New signups needed every month |\n|---:|---:|---:|")
+    for t in A["mrr_targets_usd"]:
+        subs = t / gross_revenue_per_subscriber()
+        print(f"| ${t:,} | {subs:,.0f} | {subs / (conv * lifetime_months()):,.0f} |")
+    print(f"\nAt base conversion ({conv:.2%} of signups pay) and an average paid life of {lifetime_months():.1f} months.")
+
+    print("\n## How long until a month breaks even (base, fixed costs only, zero acquisition cost)\n")
+    print("| Signups every month | First month with operating result >= 0 |\n|---:|---:|")
+    for n in (646, 800, 1000, 1500, 2000):
+        m = months_to_break_even(n, base)
+        print(f"| {n:,} | {'never' if m is None else f'month {m}'} |")
+    print("\nBreak-even signups are a long-run rate, not a promise of breaking even soon after reaching it.")
+
+    print("\n## Three business models compared (to test, not validated)\n")
+    per_paying, _ = lifetime_value_per_signup(base)
+    toolkit_net = net_of_fees(A["one_time_toolkit_price_usd"])
+    fixed_now = sum(A["fixed_costs_monthly_usd"].values())
+    print("| Model | Value per paying customer | Paying customers per month to cover fixed costs | Signups/month at base conversion |\n|---|---:|---:|---:|")
+    print(f"| Subscription ${A['price_monthly_usd']}/mo or ${A['price_annual_usd']}/yr | ${per_paying:.2f} lifetime | "
+          f"base of {fixed_now / steady_state_contribution()[0]:,.0f} subscribers | {break_even_signups(base):,} |")
+    print(f"| One-time toolkit ${A['one_time_toolkit_price_usd']} | ${toolkit_net:.2f} once | {fixed_now / toolkit_net:,.0f} buyers | "
+          f"{math.ceil(fixed_now / toolkit_net / conv):,} |")
+    print(f"| Partner pilot ${A['partner_pilot_fee_usd']} per cohort | ${A['partner_pilot_fee_usd'] * (1 - A['card_fee_pct']):.0f} per partner | "
+          f"{math.ceil(fixed_now / (A['partner_pilot_fee_usd'] * (1 - A['card_fee_pct'])))} partners | n/a |")
+    print(f"\nA one-time toolkit beats the subscription only if it converts about {per_paying / toolkit_net:.1f}x as many signups "
+          "into buyers. Partner fees are sales work, not passive revenue.")
 
     print("\n## Signups needed per month to break even (from the simulation, steady state)\n")
     print("Solved by running the cohort simulation for 240 months and finding the smallest signup rate with a non-negative "

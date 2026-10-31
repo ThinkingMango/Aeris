@@ -18,7 +18,7 @@
       "paid_conversion_of_activated": 0.05
     }
   },
-  "_conversion_note": "RevenueCat reports a 2.9% median download-to-paid rate for Health & Fitness app-store apps (2026 report, secondary summary, E-BIZ-01). Aeris is a web app with no app-store discovery or trial UI, so 3% of ACTIVATED users is optimistic, not conservative.",
+  "_conversion_note": "Assumption, direction of error unknown. RevenueCat's 2.9% median (E-BIZ-01) is download-to-paid for app-store Health & Fitness apps with trial flows; Aeris's denominator is ACTIVATED users (a subset of downloads, which would make the rate higher) but it is a web app with no trial (which may make it lower). Revised 2026-10-31 after the third review: the earlier claim that 3% is 'optimistic' did not follow. Stage 4 (docs/04 D6) measures it.",
   "conversion_timing_by_month_since_signup": [
     0.6,
     0.3,
@@ -45,7 +45,7 @@
   "international_surcharge_pct": 0.015,
   "_fee_note": "Stripe Billing 0.7% of billing volume confirmed on stripe.com/pricing 2026-10-31 (E-BIZ-02). Card fee is Stripe's long-standing US standard; confirm for your country. Sales tax / VAT not modelled.",
   "ai_cost_per_session_usd": 0.015,
-  "_ai_note": "AI arm planning figure: one read call on Sonnet 5.5 (~800 input tokens uncached, ~350 output) plus two Haiku 5.5 classifier calls = ~$0.0056, x2.5 margin = ~$0.014 (docs/09 section 5). If the AI arm is removed, ~$0.0004. Revised 2026-10-31 after red-team review: v1's $0.024-0.042 assumed three calls and a 3,000-token cached prompt.",
+  "_ai_note": "AI arm planning figure: one read call on Sonnet 5.5 (~800 input tokens uncached, ~350 output) plus two Haiku 5.5 classifier calls = ~$0.0056, x2.5 margin = ~$0.014 (docs/09 section 5). If the AI arm is removed, ~$0.0004. Revised 2026-10-31 after red-team review: v1's $0.024-0.042 assumed three calls and a 3,000-token cached prompt. The no-typing product of Stages 2-4 has no AI cost.",
   "free_sessions_cap_per_month": 3,
   "free_sessions_mean_when_active": 1.5,
   "paid_active_share": 0.7,
@@ -70,5 +70,13 @@
     1.0,
     2.0
   ],
-  "_cac_note": "Cost to acquire one signup. 0 means purely organic. Break-even is reported for each option (docs/11)."
+  "_cac_note": "Cost to acquire one signup. 0 means purely organic. Break-even is reported for each option (docs/11).",
+  "one_time_toolkit_price_usd": 29,
+  "partner_pilot_fee_usd": 500,
+  "_alt_models_note": "Alternative business models to TEST, not validated prices (docs/04 E7, docs/11). One-time toolkit: a single payment for a reviewed set of situation routines, no renewal. Partner pilot: a trainer or professional community pays a fixed fee for a limited cohort.",
+  "mrr_targets_usd": [
+    1000,
+    5000,
+    10000
+  ]
 }

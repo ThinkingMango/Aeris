@@ -17,7 +17,7 @@ The review's overall conclusion was: do not build or launch Aeris as specified; 
 | A1 | AI's incremental value over a scripted flow was never tested | Accepted, plan changed | The pilot compares a scripted arm with an AI arm in a crossover design. AI is kept only if it beats the scripted arm on pre-set outcomes; a tie removes AI | [04](04-hypotheses-and-experiments.md) H3, E4 |
 | A2 | "Only tool" and "competitors cannot copy" were unsupported | Accepted, claim withdrawn | Competitor claims now quote vendors' own pages. A first-session benchmark against four competitors is experiment E2 | [02](02-evidence-register.md) E-MKT-01 to 05; [04](04-hypotheses-and-experiments.md) E2 |
 | A3 | A chip plus a score cannot produce a precise personal reflection; specific invented context only sounds personal | Accepted, fixed and tested | The prompt forbids invented details. No-text inputs must return empty worry items. The bake-off has three no-text cases and fails any invented worry | [09](09-ai-and-models.md); `evals/model_bakeoff.py` |
-| A4 | The "best intervention" query gave every exercise the whole session's improvement | Accepted, reproduced | Our own test showed two runs of one exercise each credited the full five points. The pilot has no pattern feature. Any future display must say "you rated this helpful", not "this works best for you" | [06](06-pilot-product-spec.md) §7 |
+| A4 | The "best intervention" query gave every exercise the whole session's improvement | Accepted, reproduced | Our own test showed two runs of one exercise each credited the full five points. The pilot has no pattern feature. Any future display must say "you rated this helpful", not "this works best for you" | [06](06-pilot-product-spec.md) §B7 |
 
 ### 2. Research conclusions
 
@@ -186,3 +186,89 @@ Short, tap-first sessions; optional typing; a small fixed exercise library; a gu
 1. **"Tested" now means a named test you can run.** Every status above names one, or says "not yet built".
 2. **Our own corrections can be wrong.** B2 and B3 were. They stay visible, struck through, so a challenger can see the history.
 3. **The keyword numbers are not evidence of safety.** They show that keywords are insufficient, which is the only claim they support.
+
+---
+
+## Part F — Third review: commercial and technical validation (31 October 2026, against commit fd695bf)
+
+**Who and how.** An external model reviewed the repository end to end:
+- It reran the offline checks: 58 safety tests, 101/101 parity, 11 harness tests, and the cohort model. All reproduced.
+- It could not run the database tests, which need PostgreSQL 16 server binaries.
+- It checked competitors and sources on the web.
+
+**Overall verdict:** "Aeris addresses a real problem, but it is not yet a validated business. Fund a small, focused demand test, not the full application or the entire 20-week AI pilot." **We accept this verdict.** The plan is restructured around it ([04](04-hypotheses-and-experiments.md), [05](05-discovery-and-build-plan.md)).
+
+**How we checked it.**
+- **Code findings:** reproduced in this repository before fixing.
+- **Competitor claims:** re-read on the vendors' own pages.
+- **Economic figures:** recomputed by adding them to the model.
+
+**Count.**
+- Findings: 26. All are accepted, one of them (F-S2) with a qualification.
+- Points where we qualify the reviewer's proposal: 3 (F-Q1 to F-Q3).
+- Disputed: none.
+- Three additions of our own (F-O1 to F-O3).
+
+### Strategy and plan
+
+| # | Finding | Status | What changed |
+|---|---|---|---|
+| F-S1 | The 20-week plan spends most of the money (about $6,800 lean) on a safety build before testing demand, payment or distribution | Accepted, plan changed | Five stages with spending caps. Stages 1–4 (12 weeks, at most about $5,500) test problem, advantage, repeat use, payment and channel with **no typing and no AI**. Free text and AI are Stage 5, only after demand passes |
+| F-S2 | "Adults with work stress" is too broad. Start with one recurring moment: a private three-minute reset before a difficult work conversation, for new managers | Accepted, with a qualification | Segment and job-to-be-done in [04](04-hypotheses-and-experiments.md). **Qualification:** the wedge is narrow, and a general chatbot is a strong substitute for conversation preparation. Both risks are stated, and D3 tests against each person's real alternative |
+| F-S3 | The earliest test should be a scripted tool with **no free text**, simpler than our "scripted arm", which still sent text to a classifier | Accepted, plan changed | [06](06-pilot-product-spec.md) Part A: tap-only reset; nothing chosen leaves the phone; no classifier or E5 needed before Stage 5 |
+| F-S4 | Distribution is tested too late; partners are the likeliest channel | Accepted, plan changed | D2 partner conversations in week 1–2; D4 landing page with a partner in week 3–4; D7 partner-sponsored pilots |
+| F-S5 | Compare against the **preferred** alternative, not the fastest app. Measure first and repeat use. Keep "no preference" and dropouts | Accepted, plan changed | D3 design; "no preference" counts against Aeris; dropouts reported in D5 and E4 |
+| F-S6 | Test three business models in order (subscription, partner-sponsored, one-time toolkit) without building three products | Accepted, plan changed | D6 and D7; the model now compares all three ([11](11-economics.md)) |
+| F-S7 | Many stressors are external; coping does not fix bullying or overload | Accepted, plan changed | Screen A6 "This is about more than work" with workplace-help links; E-MKT-07 |
+| F-S8 | People may learn the routine and stop needing the app, which is good for them and bad for a subscription | Accepted | One-time toolkit is the D6 fallback; stated in [04](04-hypotheses-and-experiments.md) |
+| F-S9 | Delay employer-wide sales; no employer access to individual data | Accepted | [11](11-economics.md) "If the subscription fails"; D7 partners see only anonymous counts |
+| F-S10 | Separate paid research participants from independently acquired users; count payment net of refunds, then renewal; measure cost per paying customer | Accepted, plan changed | D5, D6 and D8 definitions |
+
+### Evidence and economics
+
+| # | Finding | Status | Evidence |
+|---|---|---|---|
+| F-E1 | Rosebud's free plan ended on 30 Sep 2026 | **Verified** on help.rosebud.app; E-MKT-02 corrected | "Effective September 30, 2026, the Rosebud free plan will be retired" |
+| F-E2 | Earkick now advertises subscriptions | **Verified** on its App Store listing; E-MKT-03 corrected | Premium $14.99/month; annual $44.99–107.99 |
+| F-E3 | Headspace/Ebb is bundled at $69.99/year | **Verified**; E-MKT-01 updated | The page also pitches Ebb for "work stress and burnout", Aeris's exact space. That point is ours, and it makes the competitor risk worse, not better |
+| F-E4 | The RevenueCat benchmark has a different denominator, so it cannot show our 3% is "optimistic" | **Accepted, claim withdrawn** | E-BIZ-01; `assumptions.json`; [11](11-economics.md) §1 |
+| F-E5 | Derived figures: $5.05 a month per subscriber; $10k a month in revenue needs about 1,980 subscribers and about 8,300 signups a month; the annual plan is about 48% off; the full simulation gives $1.06 per signup, not $1.09; break-even is a long-run figure | **Verified**: all reproduced by new model code | `python3 models/cohort_model.py`. We add one figure the reviewer did not give: at 646 signups a month, the first month with no loss is **month 73**; at 800 it is month 14 |
+| F-E6 | "Not stored in Aeris's database" is not "never stored"; provider retention has exceptions | Accepted | E-SEC-05 rewritten; [08](08-data-privacy-security.md) and [10](10-regulatory.md) wording |
+| F-E7 | Removing a user ID does not make event rows anonymous: timestamps and small cohorts can identify people | **Accepted, fixed and tested** | Deleted accounts' safety events are folded into monthly counts by route and the rows deleted. The summary suppresses cells under 5 (D02, D03; mutation "deleted accounts leave linkable safety-event rows") |
+
+### Technical
+
+| # | Finding | Status | Test or evidence |
+|---|---|---|---|
+| F-T1 | The latency harness excluded only the first call as "cold", reported the rest, and timed "visible" text before validation | **Confirmed in code, fixed and tested** | The prompt is now sent with no `cache_control`. Each call's cache tokens are recorded, so every call is confirmed cold. The gate is `renderable_s`, taken after every check, over **all** calls (offline tests 15–16) |
+| F-T2 | `validateGenerated({})` returned no problems; an invented hostile motive passed | **Confirmed, fixed and tested** | `validateReadShape` and `validateRead` check required fields, types, exactly 3 suggestions and no extra fields. New banned phrases cover attributing motives to others. TypeScript tests "an empty or malformed read is rejected…" and "validator rejects an invented motive…" (4); offline tests 11–13; parity now covers output shape (120/120). **Limit:** a word list catches only obvious cases, so the blind review rubric now asks about invented motives |
+| F-T3 | The exercise approval CHECK accepts a NULL approval date, because PostgreSQL passes a CHECK whose result is NULL | **Confirmed, fixed and tested** | Removing the fix makes N24 and N34 fail. Approval is now also tied to the content version: changing the version deactivates the exercise (N35), and approving an older version fails (N39). Mutation "approval passes through a NULL date" |
+| F-T4 | "Current consent" ignored document versions | **Confirmed, fixed and tested** | `app_private.required_consents` holds the versions in force. Raising one blocks sessions until re-consent (N36, P14). Mutation "consent to an outdated document version accepted" |
+| F-T5 | Region was nullable and could disagree with the country | **Fixed and tested** | Region must belong to the country (N37). It is required before a session where it changes the rules: US by default (N38). Docs now say "self-reported", never "verified location" |
+| F-T6 | The pilot document said one-sided; the code and the 27/40 threshold are two-sided | **Confirmed, corrected** | [04](04-hypotheses-and-experiments.md) E4 now pre-registers the exact two-sided test. `evals/stats.py` prints the thresholds and power |
+| F-T7 | The blind review omitted the generated next-step suggestions | **Confirmed, fixed and tested** | `review_body` shows every user-visible field (offline test 17) |
+
+### Models
+
+| # | Finding | Status |
+|---|---|---|
+| F-L1 | Shortlist: Sonnet 5.5 vs GPT-6.1 Terra for generation, Haiku 5.5 vs GPT-6 Luna for classification. Opus as quality reference only; no need for the $10/$50 models | Accepted. [09](09-ai-and-models.md) updated. The harness still calls only the Anthropic API; adding the OpenAI path is a Stage 5 task, not done |
+| F-L2 | Writing a safe reply and detecting risk accurately are different tasks | Agreed. Already the basis of the separate classifier evaluation (A7, E5) |
+
+### Where we qualify the review
+
+| # | Point | Our position |
+|---|---|---|
+| F-Q1 | The reviewer proposed a two-week scripted-use pilot (weeks 5–6) | Too short to observe return for a trigger that comes about twice a month. D5 runs **4 weeks**, and reuse is measured only for people with at least 2 conversations |
+| F-Q2 | "Lead with sort it, then one step" alongside "no free text" | These conflict: sorting worries normally means typing them. **Resolved** with pre-written, reviewer-approved cards per conversation type. This is less personal than a chatbot, as [06](06-pilot-product-spec.md) §3 states plainly, and D3 tests whether it is good enough |
+| F-Q3 | Stage 1–2 without a clinician | The earlier plan made "no reviewer" a stop at week 1. Interviews about work conversations, and a static prototype with no typing, are not a health service. So the reviewer is engaged at Stage 3, before anyone uses a live tool. A resource sheet covers distress in interviews |
+
+### Our own additions while fixing
+
+| # | Addition | Test |
+|---|---|---|
+| F-O1 | **The AI arm is off by default** (`ai_arm_enabled = false`). Everyone is scripted until Stage 5 is explicitly started | N40; P16; mutation "AI arm on by default" |
+| F-O2 | Conversation situations (`conv_*`) and the `conversation_reset` exercise in the schema, so Stage 3 needs no schema redesign | P15 |
+| F-O3 | Months to break-even in the model, which shows that the "646 signups" headline was misleading on its own | `models/cohort_model.py` |
+
+**What this review changed about the plan, in one sentence.** The question is no longer "is the safety programme rigorous?", because it largely is. It is "has anyone shown they want this enough to come back and pay?". No one has yet, so that is what the money now buys first.

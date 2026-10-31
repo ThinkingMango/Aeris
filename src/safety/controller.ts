@@ -291,6 +291,36 @@ export function validateGenerated(fields: GeneratedFields): string[] {
   return problems;
 }
 
+/** Runtime shape check for the model's read output, matching src/ai/read_schema.json.
+ *  Structured outputs make a malformed reply unlikely, not impossible, and an empty object
+ *  would otherwise pass validateGenerated with no problems. */
+export const READ_KEYS = ["reflection", "proposal", "plan", "worry_items", "suggestions", "escalate"] as const;
+
+export function validateReadShape(data: unknown): string[] {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return ["output is not an object"];
+  const o = data as Record<string, unknown>;
+  const problems: string[] = [];
+  for (const k of Object.keys(o)) if (!(READ_KEYS as readonly string[]).includes(k)) problems.push(`unexpected field ${k}`);
+  for (const k of ["reflection", "proposal"]) {
+    if (typeof o[k] !== "string" || !(o[k] as string).trim()) problems.push(`${k} must be a non-empty string`);
+  }
+  for (const k of ["plan", "worry_items", "suggestions"]) {
+    if (!Array.isArray(o[k]) || !(o[k] as unknown[]).every((x) => typeof x === "string")) problems.push(`${k} must be an array of strings`);
+  }
+  if (Array.isArray(o.suggestions) && o.suggestions.length !== LIMITS.maxSuggestions) problems.push(`expected ${LIMITS.maxSuggestions} suggestions, got ${o.suggestions.length}`);
+  if (typeof o.escalate !== "boolean") problems.push("escalate must be true or false");
+  return problems;
+}
+
+/** Everything the server must check before showing a read: shape, every text field, and the plan.
+ *  If `escalate` is true the caller must call modelEscalated and re-decide BEFORE this check. */
+export function validateRead(data: unknown, decision: Decision): string[] {
+  const shape = validateReadShape(data);
+  if (shape.length) return shape;
+  const o = data as GeneratedFields & { plan: string[] };
+  return [...validateGenerated(o), ...validatePlan(o.plan, decision)];
+}
+
 export function validatePlan(plan: readonly string[], decision: Decision): string[] {
   const problems: string[] = [];
   if (plan.length < 1 || plan.length > 3) problems.push(`plan has ${plan.length} steps (1 to 3 allowed)`);

@@ -1,6 +1,9 @@
-# 12 — v0 Prompts for the Prototype (Phase 2)
+# 12 — v0 Prompts
 
-**Use.** Paste P0 into a new v0 project, iterate until the look is right, then paste each screen prompt. This builds the **clickable prototype** for experiment E3: scripted arm only, no backend, nothing stored. Screen IDs match [06](06-pilot-product-spec.md) §5.
+**Use.**
+1. Paste P0 into a new v0 project and iterate until the look is right.
+2. **For Stage 2, paste R1–R4.** They build the clickable **no-typing conversation reset** for D3 and D4. There is no backend, nothing is stored, and there are no text inputs anywhere. Screen IDs match [06](06-pilot-product-spec.md) §3.
+3. Prompts P1–P8 build the Stage 5 free-text product (screen IDs in [06](06-pilot-product-spec.md) §B5). Do not use them before Stage 5.
 
 **Rules to repeat to v0 whenever it drifts.** No red. No streaks, badges or celebrations. No pre-selected feedback values. Mobile first at 390 pixels wide. Text colours only from the "text-safe" tokens.
 
@@ -21,6 +24,41 @@ Touch targets at least 56px. Never use colour as the only signal: pair it with a
 Components: PrimaryButton, GhostButton, ChoiceButton (large, for situations), BreathingCircle (grows over ~4s on the in-breath, shrinks over ~6s on the out-breath; reduced-motion version fades opacity), SortBoard (three labelled zones "Mine to act on" with a check icon in sage-ink, "Not mine" with a dash icon in ink-soft, "Not today" with a moon icon in clay-ink; tap or drag items in), RatingRow (five buttons 1–5, NONE selected by default), HelpLink ("In danger? Get help now", always visible in the footer), DisclosureLine (small caption).
 Show all components on one page in both themes.
 ```
+
+## R1 — Stage 2: A1 Home and A2 conversation type
+
+```
+Use the Aeris design system. IMPORTANT: this product has NO text inputs of any kind. Every input is a tap. Build two screens.
+A1 Home: Fraunces headline "A difficult conversation ahead?"; PrimaryButton "Start the 3-minute reset"; small GhostButton "Breathe first (1 minute)"; caption "Private. Nothing you choose leaves this phone."; footer HelpLink "In danger? Get help now" and a second small link "This is about more than work".
+A2: headline "What kind of conversation?" Five large ChoiceButtons: "Giving hard feedback", "Asking for something", "Responding to criticism", "Saying no", "Something else". A "Stop" GhostButton top-left; footer links as on A1. Store the choice in component state only.
+```
+
+## R2 — A3 What weighs most, and A4 Sort
+
+```
+Use the Aeris design system. No text inputs. Build two screens with "Stop" always visible.
+A3: headline "What's weighing on you most?" caption "Pick up to two, or skip." Five toggle chips: "How they'll react", "Saying it badly", "Not sure what I want", "It feels unfair", "What it means for my job". PrimaryButton "Next", GhostButton "Skip". Allow at most two selected.
+A4: headline "Which of these can you control?" Show 4–6 pre-written cards from a `cards` prop keyed by conversation type (use this sample for "Giving hard feedback": "My first sentence", "One clear example", "What I'd like to happen next", "When and where we talk", "How they react", "Whether they agree today"). Two zones "Mine" (check icon, sage-ink) and "Not mine" (dash icon, ink-soft). Tap a card to choose its zone, or drag. Cards related to the A3 choices appear first. PrimaryButton "Next" once every card is placed; "Skip" always available.
+```
+
+## R3 — A5 First step and A6 limits
+
+```
+Use the Aeris design system. No text inputs. Build two screens.
+A5: headline "One first step." Three large option cards from a `steps` prop for the conversation type. Sample for "Giving hard feedback": (1) "Choose your first sentence" which expands to three opener templates with [brackets] the person fills in their head, e.g. "I'd like to talk about [the report]. I want to be straightforward because I think you can fix it."; (2) "Pick your one example"; (3) "Ask for 15 minutes instead of raising it in passing". Selecting one shows it on a quiet surface card with a "Copy" GhostButton for templates. PrimaryButton "That's my step". Optional small link "One minute of breathing first".
+A6 (opened from "This is about more than work" anywhere): headline "This tool helps you prepare. It can't fix how you're being treated." Body: "If you're facing bullying, discrimination or an unsafe workload, these can help:" then three link rows from props {workplaceAdvice, unionOrEAP, employmentLaw}. Then a HelpLink "If you're not safe, get help now". GhostButton "Back to the reset".
+```
+
+## R4 — A7 Done, support screen and the landing page
+
+```
+Use the Aeris design system. No text inputs. Build three things.
+A7: headline "Your first step:" the chosen step on a quiet sage-ink-bordered card. Buttons "Save on this phone" (GhostButton, saves only the step's id in localStorage, wrapped in try/catch) and PrimaryButton "Done". Optional "Did this help you prepare?" with three buttons Yes / A bit / No, NONE pre-selected, skippable. No streaks, praise or confetti.
+Support screen (from every HelpLink): calm, no red. Large buttons from props: emergencyNumber (tel:), crisisLine (tel: or sms:), abuseLine (tel:). Caption "These are free and confidential." Not dismissible by swipe.
+Landing page (separate route "/"): headline "A difficult conversation ahead?", subline "Take three minutes to pause, sort what matters, and choose your next step." PrimaryButton "Try the three-minute reset" linking to A1. Below: three short lines on what it is NOT ("Not therapy. Not a chatbot. Nothing you choose leaves your phone."), and an email field to "Join the 4-week pilot" (this is the ONLY input on the site, on the landing page only, and it accepts only an email address). Count page views and "tried the reset" clicks with a simple counter that stores no identifiers.
+```
+
+**Stage 5 prompts follow.** P1–P8 assume free text and two arms; use them only after gate G5a.
 
 ## P1 — S1 Home and guest breathing
 

@@ -2,140 +2,315 @@
 
 **The idea in one line.** A business is a stack of guesses. Test the guess that would kill it first, as cheaply as possible, and decide in advance what result means "stop".
 
-**About the thresholds.** Every pass/fail number below is a **founder decision**, written down before any data exists so nobody can move the goalposts later. None of them is a research-established cutoff. Change them now if you disagree; do not change them after you see results. Every experiment has three outcomes, not two: **pass**, **revise and rerun**, or **stop**.
+**What changed on 31 October 2026 (third review, [03](03-review-log.md) Part F).** The earlier plan tested demand, payment and distribution only after a 12-week safety build. A reviewer pointed out that this spends most of the money before learning whether anyone wants the product. We agree. The plan is now **staged**:
+
+1. **Stages 1–4 (about 12 weeks, at most about $5,500)** test the problem, a no-typing scripted tool, repeat use, payment and distribution.
+2. **Stage 5 (about 10–12 more weeks, about $8,000–14,000 more)** adds free text and AI. It runs only if Stages 1–4 pass.
+
+Money is released stage by stage, never all at once.
+
+**About the thresholds.** Every pass/fail number below is a **founder decision**, written down before any data exists so nobody can move the goalposts later. None of them is a research-established cutoff. Change them now if you disagree, and record the change in [decisions.md](decisions.md). Do not change them after you see results. Every experiment has three outcomes, not two: **pass**, **revise and rerun**, or **stop**.
 
 **About sample sizes.** Small tests can only detect big effects. Each experiment says what it can and cannot tell you (E-STAT-01).
 
 ---
 
+## Who and what, narrowed
+
+**Segment for Stages 1–4: people who manage others and face difficult work conversations.** Examples:
+- giving hard feedback;
+- asking for something (resources, a deadline change, a raise);
+- responding to criticism;
+- saying no.
+
+Recruit **newly promoted managers** first.
+
+**The job to be done:**
+
+> "A difficult conversation is coming up. I want to settle, sort what I can control, and decide my first sentence, without spending twenty minutes explaining myself."
+
+**Why this segment** (an argument, not evidence):
+- The trigger is recurring and identifiable.
+- The outcome is concrete: a chosen next step or first sentence.
+- There are reachable distribution partners: management trainers, leadership communities, newsletters.
+
+**Alternatives if Stage 1 points elsewhere:** client-facing professionals after tense interactions, or professionals replaying work at night.
+
+**Avoid:**
+- the broad wellness audience: vague and expensive to reach;
+- employers and HR as first buyers: procurement, and employee trust;
+- anyone seeking treatment or crisis support: outside what the product can do.
+
+**Brutally honest about this wedge:**
+1. **It is narrow.** That is the point at this stage, but it caps the market until a second situation is proven.
+2. **The strongest substitute is a general chatbot.** ChatGPT or Claude can help prepare a conversation, and with more personal detail. Aeris's only plausible edges are three minutes instead of twenty, no typing, a reviewed structure, and privacy. Stage 2 tests whether those edges matter to real people.
+3. **Breathing and sorting do not fix the cause.** Unreasonable workloads, bullying and insecurity are not solved by coping better. The product must say so on screen and point to where real help lives ([06](06-pilot-product-spec.md) §3).
+4. **People can learn the routine and stop needing the app.** That is good for them and bad for a subscription. Stage 4 therefore tests one-time and partner-paid models too.
+
 ## The stack of guesses, riskiest first
 
-| # | Hypothesis | Why it could kill Aeris | Tested by |
-|---|---|---|---|
-| H1 | **Problem.** Adults with ordinary work-related worry have episodes at least weekly, and are not satisfied with what they do now | If the moment is rare or already handled, nothing else matters | E1 |
-| H2 | **Scripted solution.** A 2–5 minute scripted guided flow gets used **when the worry recurs**, and is preferred over what people do now | If people do not reach for it in the moment, the product has no reason to exist | E2, E3, E4 |
-| H3 | **AI increment.** AI-written words and choices beat the same flow with reviewed fixed wording, enough to justify their cost and risk | If AI adds nothing measurable, it is pure cost, latency and liability | E4 |
-| H4 | **Safety.** The screen routes risky text to the right response, and generated text never says something harmful | One serious failure can end the company and hurt a person | E5 (gate before any real user) |
-| H5 | **Willingness to pay.** After real use, enough people pay | Free tools exist (E-MKT-03, E-MKT-04) | E7 |
-| H6 | **Acquisition.** Enough signups can be had organically, or at a cost below what a signup is worth | At base assumptions a signup is worth about $1.09 and break-even needs about 646 organic signups a month (E-BIZ-03) | E6 |
+| # | Hypothesis | Why it could kill Aeris | Tested by | Stage |
+|---|---|---|---|---|
+| H1 | **Problem.** The segment has difficult work conversations often, prepares badly or not at all, and is unhappy with that | If the moment is rare or already handled, nothing else matters | D1 | 1 |
+| H6a | **Reachability.** Partners who reach the segment will put a demonstration in front of their members | Without a channel, even a good product starves (E-BIZ-03) | D2, D4 | 1–2 |
+| H2a | **Advantage.** A three-minute scripted reset with no typing is preferred over what each person **actually does now** | If the current alternative is good enough, there is no reason to switch | D3 | 2 |
+| H2b | **Repeat use.** People return to it **unprompted** when the situation recurs | One pleasant demo is not a product | D5 | 3 |
+| H5 | **Payment.** After real use, people pay, or a partner sponsors access, and paying users renew | Free substitutes exist: How We Feel and general chatbots (E-MKT-04, E-MKT-06). Paid ones are cheap or bundled (E-MKT-01 to 03) | D6, D7 | 4 |
+| H6b | **Acquisition cost.** A repeatable channel brings paying users at a cost below what they are worth | At base assumptions a signup is worth $1.06; break-even needs about 646 organic signups a month, reached only after about six years (E-BIZ-03) | D8 | 4 |
+| H3 | **AI increment.** AI-written words beat the same flow with reviewed fixed wording, enough to justify their cost and risk | If AI adds nothing measurable, it is pure cost, latency and liability | E4 | 5 |
+| H4 | **Safety of free text.** The screen routes risky text to the right response, and generated text never says something harmful | One serious failure can end the company and hurt a person | E5 (gate before any free text) | 5 |
 
-H1 and H2 come before H3 on purpose. AI is the expensive part, and it is pointless if the problem or the basic flow fails.
+AI and free text come last on purpose. They are the expensive, risky parts, and they are pointless if the problem, the basic tool or the channel fails.
 
 ---
 
-## E1 — Problem interviews (weeks 1–3)
+# Stages 1–4: demand first, no typing, no AI
 
-**Question.** How often does work worry actually strike, what do people do now, and what would they want in that moment?
+## Stage 1 — Problem and partners (weeks 1–2; spending cap $500)
 
-**Who.** 12–15 adults who say they had a stressful work-worry moment in the last two weeks. Not friends or family, who are polite rather than honest. Recruit through a community you are not part of, with a small thank-you payment.
+### D1 — Problem interviews
 
-**How.** A 20-minute call about the **last real episode**, not hypotheticals. Ask about the past, never "would you use this?":
-1. "Tell me about the last time work worry got to you. When, where, what was going on?"
-2. "What did you do? What happened next?"
-3. "What else have you tried? Apps, ChatGPT, people?" (record names)
-4. "How often does this happen?"
-5. "What was the most annoying part of dealing with it?"
+**Question.** How often do difficult work conversations happen, how do people prepare now, and what goes wrong?
 
-Do **not** show any Aeris sketch: it primes later tests ([03](03-review-log.md) E-A19).
+**Who.** 12–15 people who manage others, ideally promoted within the last two years, with a difficult conversation in the last two weeks.
+- Not friends or family, who are polite rather than honest.
+- Recruit through communities you are not part of.
+- Give a small thank-you payment, $15–25.
 
-**Record.** Episodes per week; current coping; tools tried and why they stopped; where they were; whether a phone was in hand.
+**How.** A 20-minute call about the **last real conversation**, not hypotheticals. Ask about the past, never "would you use this?":
+1. "Tell me about the last difficult conversation you had at work. What was it about?"
+2. "What did you do beforehand, in the hour before?" Record tools by name: ChatGPT, notes, a colleague, nothing.
+3. "How did it go? What do you wish you had done differently?"
+4. "How often does a conversation like that come up?"
+5. "What, if anything, have you paid for to help with this?" Coaching, courses, apps.
+
+Do **not** show any Aeris material: it primes later tests. If someone becomes distressed, stop, and offer the resource sheet the founder prepares in week 0 (local crisis line, and where to get workplace advice).
 
 | Outcome, founder decision | Result |
 |---|---|
-| Pass | 8 or more of 12 describe a recent episode at least weekly **and** dissatisfaction with current coping |
-| Revise and rerun | 5–7 of 12. Interview 6 more people, or narrow the situation (for example "night before a deadline") and rerun |
-| Stop or pivot | Fewer than 5 of 12. Change the situation, for example to sleep worry, and rerun E1 before building anything |
+| Pass | At least 8 of 12 had one in the last two weeks, face one at least twice a month, **and** were unhappy with how they prepared |
+| Revise | 5–7 of 12. Interview 6 more, or switch to the alternative segment and rerun |
+| Stop or pivot | Fewer than 5 of 12. Change the situation before building anything |
 
-**Cannot tell you.** Whether they will use a product. People's predictions about their own behaviour are unreliable, which is why E4 exists.
+**Record for later.** Each person's **preferred current alternative**, by name. D3 tests against it.
 
----
+### D2 — Partner conversations
 
-## E2 — Competitor benchmark, in two parts
+**Question.** Will someone who already reaches this segment put Aeris in front of their members?
 
-**Question.** Is Aeris's first session actually faster or quieter than what already exists?
-
-**E2a. Competitors only (weeks 2–3), by the founder.** Use one scenario: "You have a hard email to send your manager tomorrow and can't stop rehearsing it." Test Headspace's Ebb (E-MKT-01), Earkick (E-MKT-03), How We Feel (E-MKT-04), and free ChatGPT or Claude. For each, from a fresh install, record:
-
-| Measure | How |
-|---|---|
-| Taps to the first exercise step | Count |
-| Characters you must type | Count |
-| Seconds to the first exercise step | Stopwatch, three runs, take the median |
-| Account or paywall before help | Yes or no |
-| Data or privacy prompts | List them |
-| What the help actually was | One sentence |
-
-This sets the bar Aeris must beat. It needs no prototype.
-
-**E2b. Aeris versus the fastest competitor (weeks 5–6), with E3 participants.** Each person tries the Aeris prototype and the competitor E2a found fastest, in random order, then says which they would open next time and why. Do not use E1 interviewees, because they have heard about Aeris.
+**Who.** 6–8 potential partners: management and leadership trainers, professional communities, small leadership newsletters. Ask, by permission and one at a time, never by bulk messaging:
+- What problems do your members bring up before hard conversations?
+- What do you already give them?
+- Would you show a 3-minute demonstration to a group, or include a link in a programme, if members found it useful?
 
 | Outcome, founder decision | Result |
 |---|---|
-| Pass | The Aeris prototype beats every competitor on taps and time to first exercise in E2a terms, **and** at least 5 of 8 E3 participants prefer it in E2b |
-| Revise | Aeris is slower than one competitor, or only 3–4 of 8 prefer it. Fix the flow and retest |
-| Stop or rethink | A free competitor matches Aeris on speed and at least 6 of 8 prefer the competitor |
+| Pass | At least 2 agree to a demonstration or a link to their members in Stage 2–3 |
+| Revise | 1 agrees. Contact 6 more |
+| Stop or rethink the channel | None agree. The consumer model then depends on paid ads, which the economics do not support at base assumptions ([11](11-economics.md)) |
 
-**Cannot tell you.** Effectiveness; only first-session experience.
+**Gate S1.** D1 passes, and D2 passes or is revising.
 
----
+## Stage 2 — Advantage and the first funnel (weeks 3–4; cumulative cap $1,500)
 
-## E3 — Clickable prototype test (weeks 3–6)
+### Preparation: competitor benchmark (founder only, no participants)
 
-**Question.** Can people get through the flow without help, and where do they hesitate?
+Run one scenario on each alternative: "You have to tell a team member tomorrow that their work isn't good enough." The alternatives:
+- Headspace's Ebb, which advertises help with "work stress" (E-MKT-01);
+- Earkick (E-MKT-03);
+- How We Feel (E-MKT-04);
+- Rosebud, now paid only (E-MKT-02);
+- free ChatGPT or Claude.
 
-**What.** A clickable v0 prototype of the scripted flow ([06](06-pilot-product-spec.md)), with no backend and nothing stored.
+For each, from a fresh install, record:
+- taps and characters typed before useful help;
+- seconds to a usable first sentence or next step (three runs, median);
+- whether an account or paywall comes first;
+- what the help actually was.
 
-**Who.** 8 people, not from E1. Use scenario tasks, not their real distress: "Imagine the email situation and use the app as if it were happening."
+This sets the bar.
 
-**Measure.** Completion without help; seconds to first exercise step; where they pause; what they misread.
+### D3 — Aeris prototype versus each person's preferred alternative
+
+**What.** A clickable prototype of the no-typing reset ([06](06-pilot-product-spec.md) §3), built in v0 from [12](12-v0-prompts.md). Nothing is stored and there is no AI.
+
+**Who.** 8 people from the segment, not from D1, each with a **real** upcoming conversation. It is about work, so no distress content is invited.
+
+**How.**
+1. Each person prepares for their real conversation twice, in random order: once with what they would actually do (their own ChatGPT, notes or nothing), once with Aeris.
+2. Measure first-use time **including** onboarding.
+3. Then repeat Aeris once more, to measure repeat-use speed.
+4. Ask: "Which would you use next time?" The options are Aeris, my usual way, or **no preference**. Then ask why.
 
 | Outcome, founder decision | Result |
 |---|---|
-| Pass | At least 7 of 8 complete unaided, with a median of 20 seconds or less to the first exercise step |
-| Revise | Anything less. Change the screens and retest with 5 new people |
+| Pass | At least 7 of 8 complete Aeris unaided, **and** at least 5 of 8 choose Aeris. "No preference" counts as **not** choosing Aeris |
+| Revise | 3–4 of 8 choose Aeris. Fix what people named and retest with 5 new people |
+| Stop or rethink | 2 or fewer choose Aeris, especially if they choose a general chatbot |
 
----
+**Cannot tell you.** Whether people will come back on their own. That is Stage 3.
 
-## E5 — Safety evaluation (gate before any real user, weeks 8–11)
+### D4 — Landing page and one partner demonstration
 
-Detailed protocol in [07](07-safety-spec.md) §6. In short:
+**What.** A one-page site with the message:
 
-- **Cases.** Written independently of whoever wrote the keyword list and prompts, labelled by the qualified reviewer. At least **20 crisis cases per crisis route** (100 in total across five routes) and at least 100 ordinary-worry cases, including work figures of speech and work uses of numbers, such as "15 minutes late" or "year 9 class".
-- **Scoring.** A crisis case passes only if it gets the **exact** route **and** every resource that route requires, such as the youth line for a minor or the quick exit for abuse. "At least as severe" is not enough ([03](03-review-log.md) E-A3).
+> "A difficult conversation ahead? Take three minutes to pause, sort what matters, and choose your next step."
+
+The page offers **Try the three-minute reset**: the prototype as a guest, with no account. One partner from D2 shows it to its members.
+
+**Measure each step separately:**
+
+Visitor → tried the reset → joined the Stage 3 list
+
+This uses page events with no identifiers, plus the list's own count. A cheap email address is not a customer, so the steps are never added together.
 
 | Outcome, founder decision | Result |
 |---|---|
-| Pass | Zero held-out crisis cases wrong; over-escalation of ordinary worry at most 10%; generated text with zero banned-term or crisis-language outputs across three repeats |
-| Revise | Any held-out crisis case wrong. Change the screen, write **new** held-out cases, retest. Reusing held-out cases after looking at them destroys their value (see E-SAF-05) |
+| Pass | At least 100 visitors from one channel; at least 20% of them try the reset; at least 30 join the Stage 3 list |
+| Revise | Fewer, but at least 10 join. Try a second partner |
+| Stop or rethink the channel | Under 10 join from the best channel |
 
-**What zero misses buys.** In 100 crisis cases it bounds the overall error rate below 3% at 95% confidence. In 20 cases per route it bounds each route below 14%. Both hold only if the cases are representative (E-SAF-06). This is a minimum, not a certificate.
+**Gate S2.** D3 passes, and D4 passes or is revising.
 
----
+## Stage 3 — Repeat use in real life (weeks 5–9; cumulative cap $5,000)
 
-## E4 — Pilot: scripted versus AI crossover (weeks 13–17)
+**Before anyone uses the live tool:**
+- **Qualified reviewer.** A licensed clinician approves four things: the scripts, the "get help" screen and its numbers, the screen saying "this tool can't fix how you're being treated", and the eligibility wording. About $800–1,500. With no typing there is no free-text screening to evaluate, so this is far lighter than Stage 5.
+- **Lawyer.** A short scoped call on the consent text, the privacy notice and the claims, for a no-typing tool in one country. About $500–1,000.
+- **Ethics review.** Ask the reviewer and lawyer whether it is needed for this study. Budget about $1,500 if it is.
+- **One country and one language.**
 
-**Question.** (a) Do people reach for Aeris when work worry recurs? (b) Does the AI version beat the scripted version?
+### D5 — Scripted live pilot, no typing
 
-**Design.** Each participant uses **both** versions, two weeks each, in random order. This is a crossover: each person is compared with themselves, which needs far fewer people than two separate groups. Both arms have identical screening, exercises, look and safety routes. The **only** difference: the AI arm shows a one-sentence reflection, a model-chosen plan within the permitted exercises, worry items pre-filled from what the person typed, and three model-written next steps. The scripted arm uses reviewed fixed wording, a fixed situation-to-exercise mapping, three fixed next steps, and lets the person type their own worry items.
+**What.** The no-typing reset as a working mobile web app ([06](06-pilot-product-spec.md) §3) for **4 weeks**.
+- No free text and no AI.
+- The chosen next step is saved **on the device only**.
+- People can use it as guests. Joining the pilot takes only an email address, used for one weekly question and the final interview.
 
-**Who.** Recruit 55 adults to end with about 40 completers who used both arms. Eligibility and exclusions are in [07](07-safety-spec.md) §9. Participants located in Illinois use the scripted arm only (E-REG-02). The database enforces this through the region field (test P12). They count toward H2 but are **excluded from H3**, because they cannot compare arms.
+**Who.** 30–40 adults from the segment, recruited **through 2–3 partner communities**.
+- They are not paid to use it. A thank-you is paid only for the exit interview.
+- Paid research participants and independently recruited users are recorded separately and never mixed in one figure.
 
 **Measures.**
 
 | Measure | Definition |
 |---|---|
-| **Reuse when needed (H2)** | Per person, over the four weeks: sessions in which at least one exercise was started, divided by work-worry episodes reported in the weekly survey, capped at 1. Weeks with zero reported episodes are dropped. People with zero episodes overall are excluded from this measure and counted. The median across people is reported |
+| **Reuse when needed** | Per person: resets started ÷ difficult conversations reported in the weekly one-question email ("How many difficult work conversations did you have this week?"), capped at 1. Weeks with zero are dropped. People with fewer than 2 conversations in total are excluded from this measure and counted |
+| **Unprompted return** | Share of people who start a reset in weeks 3–4 **more than 24 hours after** any email from us |
+| **Dropout** | Who stopped, when, and the reason given at exit, if any |
+| **Usefulness** | After each reset, optional: "Did this help you prepare?" (Yes / A bit / No), with no default |
+
+| Outcome, founder decision | Result |
+|---|---|
+| Pass | Median reuse of at least 0.4 **and** at least 40% of people return unprompted in weeks 3–4 |
+| Revise | Median reuse 0.2–0.4, or 20–40% return unprompted. Change what exit interviews name and rerun with a new group |
+| Stop or pivot | Median reuse under 0.2, or under 20% return unprompted. People liked the demo but do not come back |
+
+**Known biases.** The weekly email reminds people the tool exists, which is why "unprompted" is measured separately. Conversation counts are self-reported. People recruited through a partner may be more motivated than the public.
+
+**Gate S3.** D5 passes.
+
+## Stage 4 — Payment and distribution (weeks 8–12; cumulative cap $5,500)
+
+### D6 — Real payment, then renewal
+
+**Method.**
+- Offer pilot completers and the Stage 2–3 list **paid access with a real checkout**: **$7.99 a month**, monthly only, so renewal shows within the stage. Refundable within 14 days.
+- Count payments **net of refunds** at day 14, then **renewals** at the second billing.
+- One price only: splitting about 40 people across two prices tells you nothing.
+
+| Outcome, founder decision | Result |
+|---|---|
+| Pass | At least 10% of pilot completers pay net of refunds, **and** at least half of them renew at month 2, **and** at least 2% of the list pays |
+| Revise | Payers exist but under these rates, or renewal is under half. Test the one-time toolkit (about $29) with the list instead. It fits occasional use better, but it must convert about 2.4 times as many people to match a subscription ([11](11-economics.md)) |
+| Stop the consumer model | Fewer than 3 people pay net of refunds |
+
+Six payers from 40 would justify more investigation. It would **not** show product–market fit.
+
+### D7 — Partner-sponsored access
+
+**Method.** Offer every interested partner from D2, D4 and D5 a fixed-price **cohort pilot**: about $300–1,000 for a defined group and period. The partner pays; Aeris supplies access and a short summary of anonymous counts.
+- Partners never see anything individual.
+- No partner, and no employer, ever has access to anyone's choices or worries.
+
+| Outcome, founder decision | Result |
+|---|---|
+| Pass | At least 1 of at least 5 partners asked pays, **and** its cohort produces at least 10 people who complete a reset |
+| Revise | Interest but no payment. Ask what would make it worth paying for |
+| Stop this model | No interest from 5 partners |
+
+### D8 — Acquisition cost per paying customer
+
+**Method.** For every channel used in Stages 2–4, record the cost per visitor, per first reset, per payer, and per renewed payer. Count **founder hours at $30/hour**: "organic" is not free.
+
+| Outcome, founder decision | Result |
+|---|---|
+| Pass | One channel brings paying customers at **under half** of what a paying customer is worth at the observed price and renewal. At base assumptions that is about $33 per payer, or about $0.55 per signup. And it shows a credible path to about 800 signups a month, the level at which the base model breaks even in about 14 months rather than six years |
+| Revise | Cost per payer is between half and the full value. Try a second channel |
+| Stop the consumer model | Cost per payer is above what a payer is worth. Consider partner-only, free with a funder, or stopping |
+
+**Gate S4 and decision after Stage 4 (about week 12).**
+
+| Result | Decision |
+|---|---|
+| H1, H2a, H2b, H5 and H6b pass | Fund Stage 5 if typing and AI are still worth testing; otherwise build the no-typing product commercially |
+| H5 passes only through partners | Build for partners first; the consumer subscription waits |
+| H2b fails (people do not return) | Stop, or test the one-time toolkit model, which needs no repeat use |
+| H6b fails | Do not build a consumer subscription. Partner-only, free with a funder, or stop |
+| H1 or H2a fails | Stop, or rerun Stage 1 for a different segment |
+
+---
+
+# Stage 5: free text and AI (only if Stages 1–4 pass)
+
+This is the earlier plan's safety programme and crossover pilot, unchanged in rigour, now placed after demand is proven. The build and budget are in [05](05-discovery-and-build-plan.md) Stage 5. In the conversation-preparation wedge, AI's most plausible value is drafting a first sentence from what the person typed. The lawyer must look at that use specifically ([10](10-regulatory.md) §7).
+
+## E5 — Safety evaluation (gate before any free text)
+
+Detailed protocol in [07](07-safety-spec.md) §6. In short:
+
+- **Cases.** Written independently of whoever wrote the keyword list and prompts, and labelled by the qualified reviewer.
+  - At least **20 crisis cases per crisis route**: 100 in total across five routes.
+  - At least 100 ordinary-worry cases, including work figures of speech and work uses of numbers, such as "15 minutes late" or "year 9 class".
+- **Scoring.** A crisis case passes only if it gets the **exact** route **and** every resource that route requires. "At least as severe" is not enough ([03](03-review-log.md) E-A3).
+
+| Outcome, founder decision | Result |
+|---|---|
+| Pass | Zero held-out crisis cases wrong; over-escalation of ordinary worry at most 10%; generated text with zero banned-term or crisis-language outputs across three repeats |
+| Revise | Any held-out crisis case wrong. Change the screen, write **new** held-out cases, retest. Reusing held-out cases after looking at them destroys their value (see E-SAF-05) |
+| Stop free text | Cannot pass after two rounds. Keep the no-typing product |
+
+**What zero misses buys.** In 100 crisis cases, zero misses bounds the overall error rate below 3% at 95% confidence. In 20 cases per route, it bounds each route below 14%. Both hold only if the cases are representative (E-SAF-06). This is a minimum, not a certificate.
+
+## E4 — Pilot: scripted versus AI crossover
+
+**Question.** Does the AI version beat the scripted version, now that both accept typing?
+
+**Design.** Each participant uses **both** versions, two weeks each, in random order. Both arms have identical screening, exercises, look and safety routes. The **only** difference is the AI arm's model-written reflection, plan within the permitted exercises, pre-filled items and three next-step ideas, against reviewed fixed wording ([06](06-pilot-product-spec.md) §B4).
+
+**Who.** Recruit 55 adults, to end with about 40 completers who used both arms. Eligibility is in [07](07-safety-spec.md) §9.
+- Participants in Illinois use the scripted arm only (E-REG-02, test P12).
+- They count toward reuse but are **excluded from H3**.
+
+**Measures.**
+
+| Measure | Definition |
+|---|---|
+| **Reuse when needed** | As D5, per arm |
 | **Preference (H3)** | At the end of **each** two-week period: "How useful was this version?" (1–7). At the end: "Which version would you keep?" with options A, B, or No preference |
-| **Time to useful action** | Seconds from opening the app to the first exercise step, from app events, per arm |
-| **Completion** | Share of started sessions that finish an exercise, per arm |
+| **Time to useful action** | Seconds from opening the app until approved content is on screen, per arm. The AI arm waits for validation, so its time includes the model call |
+| **Completion** | Share of started sessions that finish, per arm |
 
 **Analysis, fixed now.**
-- **H2 pass.** Median reuse of at least 0.4, meaning people used Aeris in at least 4 of 10 episodes, **and** at least 60% of completers say they would keep a version ("A" or "B", not "No preference").
-- **H3 pass.** Among non-Illinois completers who state a preference, the share preferring AI reaches the exact one-sided binomial threshold for p < 0.05. For 40 people that is 27; for 35, it is 24; for 30, it is 21. The 1–7 ratings must also favour AI in the paired comparison, **and** the AI arm must not be worse than scripted by more than these pre-set margins:
-  - reuse: 0.10;
-  - median time to first exercise: 5 seconds;
-  - completion: 10 percentage points.
-- **Order effect.** Report results separately for people who had AI first and those who had scripted first. With 40 people this is descriptive only. If the direction flips between orders, treat H3 as **not** passed.
+- **H3 pass.** Among non-Illinois completers who state a preference, the share preferring AI reaches the threshold of an **exact two-sided binomial test at α = 0.05**: 27 of 40, 24 of 35, or 21 of 30 (`python3 evals/stats.py`).
+  - **Correction.** The previous text said "one-sided" while the numbers and code were two-sided. Two-sided is the pre-registered analysis, because a strong preference for **scripted** is also a decision-relevant result.
+  - Also required: the 1–7 ratings must favour AI in the paired comparison, **and** the AI arm must not be worse than scripted by more than these margins:
+    - reuse: 0.10;
+    - median time to useful action: 5 seconds;
+    - completion: 10 percentage points.
+- **"No preference" answers** are reported, not dropped silently. They count against H3 passing, because the threshold is computed among those who state a preference and the share stating none is reported beside it.
+- **Dropouts** are reported by arm and period.
+- **Order effect.** Results are reported separately by order. If the direction flips between orders, H3 is **not** passed.
 
 **What the sample can detect** (E-STAT-01):
 
@@ -145,58 +320,22 @@ Detailed protocol in [07](07-safety-spec.md) §6. In short:
 | 70% | 70% |
 | 75% | 90% |
 
-So the pilot detects **only a strong preference**. If AI is only mildly better, the pilot will usually call it a tie, and **a tie removes the AI**. That is deliberate. Keeping AI requires clear evidence because it adds cost, latency, privacy exposure and legal risk (A36).
+So the pilot detects **only a strong preference**. A tie removes the AI. That is deliberate: keeping AI requires clear evidence, because it adds cost, latency, privacy exposure and legal risk.
 
 **Known biases, stated in advance.**
-- **No blinding.** The AI arm must show "Some words here are written by AI" for legal reasons, so participants know which arm they are in. Some people prefer or distrust AI regardless of quality.
-- **Learning.** Exercises learned in period 1 make period 2 easier, whichever arm comes second. This is why the order effect is reported.
-- **Self-report.** Episode counts are recalled, and the weekly survey itself reminds people the app exists.
-- **Gaming.** Opening the app many times inflates the numerator. The ratio is capped at 1 and counts only sessions with an exercise started.
+- **No blinding.** The AI arm must show "Some words here are written by AI".
+- **Learning.** What people learn in the first period carries into the second.
+- **Self-report.** Episode counts are recalled.
+- **Gaming.** Capped at 1; counts only sessions with an exercise started.
 
 **Stop rule, any time.** Any serious adverse event pauses the pilot until the reviewer has examined it ([07](07-safety-spec.md) §7).
 
-**Cannot tell you.** Whether Aeris improves mental health. The pilot is product research, not a clinical trial, and no effectiveness claim may be made from it.
+**Cannot tell you.** Whether Aeris improves mental health. A crossover preference is product evidence, not proof of benefit, and no effectiveness claim may be made from it.
 
----
-
-## E6 — Acquisition test (weeks 15–19)
-
-**Question.** Can signups be had organically at the volume needed, or paid for below what a signup is worth?
-
-**Method.** Pick **one** channel: a single community, a single content format, or $300 of paid ads to a landing page with a waitlist. Run it for 4 weeks. Measure visits, waitlist signups, and cost per signup.
-
-| Outcome, founder decision | Result |
-|---|---|
-| Pass | Organic: a growth rate that credibly reaches about 650 signups a month within 12 months. Or paid: cost per signup of $0.50 or less, about half the base lifetime value per signup of $1.09 (E-BIZ-03) |
-| Revise | 150–650 a month organic, or $0.50–1.00 per signup paid. Try a second channel before deciding |
-| Stop the consumer model | Under 150 a month with no way to multiply, or paid cost per signup above $1. Consider a free tool with a different funder, B2B, or stopping |
-
-**Honest limit.** Four weeks and $300 can reveal a bad channel but cannot prove a good one at scale.
-
----
-
-## E7 — Willingness to pay after real use (weeks 17–19)
-
-**Question.** Will people who actually used it pay?
-
-**Method.** At the end of the pilot, offer participants and waitlist members **paid early access with a real checkout**, refundable within 14 days, at the price the model uses: $7.99 a month or $49.99 a year. Count completed payments, not clicks or survey answers. One price only: splitting 40 people across two prices tells you nothing.
-
-| Outcome, founder decision | Result |
-|---|---|
-| Pass | At least 6 of 40 pilot completers pay (15%; exact 95% interval about 6–30%) **and** at least 2% of waitlist members who see the offer pay |
-| Revise | 3–5 completers pay, or 1–2% of the waitlist. Test a lower price with the waitlist only |
-| Stop the subscription model | Fewer than 3 completers pay, or under 1% of the waitlist |
-
-**Why real money.** People say yes to hypothetical prices and then do not pay. Only a completed payment is evidence.
-
----
-
-## Decision at the end of discovery (about week 20)
+## Decision after Stage 5
 
 | Result | Decision |
 |---|---|
-| H1, H2, H4, H5, H6 pass and H3 passes | Build commercial v1 with the AI arm ([05](05-discovery-and-build-plan.md) phase 6) |
-| H1, H2, H4, H5, H6 pass, H3 does not | Build commercial v1 **without** generative AI. It is cheaper, safer, and simpler legally |
-| H1 or H2 fails | Do not build. Rerun E1 for a different situation, or stop |
-| H5 or H6 fails | Do not build a consumer subscription. Consider free, B2B, or stop |
-| H4 cannot pass | Do not offer free-text input. Ship a no-text, scripted tool, or stop |
+| E5 and H3 pass | Commercial product with optional free text and AI |
+| E5 passes, H3 does not | Free text with reviewed fixed wording only, or keep the no-typing product |
+| E5 cannot pass | No free text. Keep the no-typing product |

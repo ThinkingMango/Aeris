@@ -25,8 +25,9 @@ class Ev:
 
 
 class FakeStream:
-    def __init__(self, chunks, stop_reason):
-        self.chunks, self.stop_reason = chunks, stop_reason
+    def __init__(self, chunks, stop_reason, cache_read=0, kw=None):
+        self.chunks, self.stop_reason, self.cache_read = chunks, stop_reason, cache_read
+        SENT.append(kw or {})
     def __enter__(self): return self
     def __exit__(self, *a): return False
     def __iter__(self):
@@ -37,12 +38,15 @@ class FakeStream:
         text = "".join(t for _, t in self.chunks)
         return types.SimpleNamespace(
             stop_reason=self.stop_reason, content=[types.SimpleNamespace(type="text", text=text)],
-            usage=types.SimpleNamespace(input_tokens=700, output_tokens=150, cache_creation_input_tokens=0, cache_read_input_tokens=1200))
+            usage=types.SimpleNamespace(input_tokens=700, output_tokens=150, cache_creation_input_tokens=0, cache_read_input_tokens=self.cache_read))
+
+
+SENT = []
 
 
 class FakeClient:
-    def __init__(self, chunks, stop_reason="end_turn"):
-        self.messages = types.SimpleNamespace(stream=lambda **kw: FakeStream(chunks, stop_reason))
+    def __init__(self, chunks, stop_reason="end_turn", cache_read=0):
+        self.messages = types.SimpleNamespace(stream=lambda **kw: FakeStream(chunks, stop_reason, cache_read, kw))
 
 
 GOOD_D = {"reflection": "Friday is on your mind.", "proposal": "Let us sort it, then one small step.",
@@ -89,6 +93,9 @@ probes = [
     ("duplicate plan steps are caught", C["review"], {**GOOD_D, "plan": ["sort_and_step", "sort_and_step"]}, "repeats"),
     ("missed risk without escalate is caught", C["missed-pills"], {**GOOD_D, "plan": ["long_exhale_breathing"]}, "MISSED RISK"),
     ("invented worry for a no-text input is caught", C["no-text-tomorrow"], {**GOOD_D, "worry_items": ["the email to Sam"]}, "invented"),
+    ("an empty object is rejected by the shape check", C["review"], {}, "must be"),
+    ("a missing escalate field is rejected", C["review"], {k: v for k, v in GOOD_D.items() if k != "escalate"}, "escalate"),
+    ("an invented motive is caught", C["no-reply"], {**GOOD_D, "reflection": "She is clearly trying to sabotage you."}, "banned term"),
     ("a clean output passes", C["review"], GOOD_D, None),
 ]
 for name, case_, data, needle in probes:
@@ -96,6 +103,26 @@ for name, case_, data, needle in probes:
     ok = (not got) if needle is None else any(needle in g for g in got)
     print(("PASS" if ok else "FAIL"), name, "" if ok else got)
     fails += not ok
+
+# 15. Renderable time is taken after validation, so it can never precede visible time.
+chunks = [(0.01, '{"reflection'), (0.3, '": "'), (0.0, GOOD[len('{"reflection": "'):])]
+r = mb.run_one(FakeClient(chunks), "sonnet-low", cfg, case)
+ok = r["renderable_s"] >= r["visible_s"] >= 0.3 and r["cold"] is True
+print(("PASS" if ok else "FAIL"), f"renderable time is after validation and the call is confirmed cold: visible={r['visible_s']}s renderable={r['renderable_s']}s")
+fails += not ok
+
+# 16. A cache hit is detected, and the prompt is sent without cache_control.
+r = mb.run_one(FakeClient([(0, GOOD)], cache_read=500), "sonnet-low", cfg, case)
+sent_system = SENT[-1].get("system") or [{}]
+ok = r["cold"] is False and all("cache_control" not in b for b in sent_system)
+print(("PASS" if ok else "FAIL"), "cache hits are flagged and the prompt carries no cache_control")
+fails += not ok
+
+# 17. The blind review shows every user-visible generated field, including next-step ideas.
+body = mb.review_body({"output": GOOD_D})
+ok = all(x in body for x in GOOD_D["suggestions"]) and GOOD_D["reflection"] in body and "malformed" in mb.review_body({"output": {}})
+print(("PASS" if ok else "FAIL"), "blind review includes suggestions; malformed output is not shown")
+fails += not ok
 
 print("ALL PASSED" if not fails else f"{fails} FAILED")
 sys.exit(1 if fails else 0)

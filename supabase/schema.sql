@@ -30,6 +30,10 @@
 -- is enforced at reservation and settles may exceed estimates; classifier
 -- and generator calls have separate limits; Illinois participants are
 -- held on the scripted arm; a global kill switch exists.
+-- Revised again after the third review (docs/03 Part F): approval cannot pass
+-- through a NULL and is tied to the content version; consent must be to the
+-- version in force; region must match country and is required where it
+-- matters; deleted accounts leave only monthly counts, never event rows.
 --
 -- Tested by supabase/tests/run_security_tests.py (run: npm run test:db),
 -- with a mutation check (npm run test:db:mutations).
@@ -53,7 +57,9 @@ grant usage on schema app_private to service_role;
 -- ---------------------------------------------------------------------
 -- 1. Types
 -- ---------------------------------------------------------------------
-create type public.app_situation as enum ('work_tomorrow', 'work_replay', 'work_too_much', 'work_other');
+create type public.app_situation as enum ('work_tomorrow', 'work_replay', 'work_too_much', 'work_other',
+  -- Stages 1-4 wedge: a difficult conversation ahead (docs/04, docs/06 section 3)
+  'conv_feedback', 'conv_ask', 'conv_criticism', 'conv_say_no', 'conv_other');
 create type public.app_arm as enum ('scripted', 'ai');
 
 -- ---------------------------------------------------------------------
@@ -86,8 +92,22 @@ create table app_private.settings (
   max_single_call_usd            numeric(12,6) not null default 0.25 check (max_single_call_usd > 0),
   -- Kill switch read by every server function: when true, the controller is
   -- run with globalRestricted and no generated text is shown to anyone.
-  global_restricted              boolean not null default false
+  global_restricted              boolean not null default false,
+  -- The AI arm is OFF until Stage 5 is explicitly started (docs/04). While off,
+  -- everyone is on the scripted arm whatever their random assignment.
+  ai_arm_enabled                 boolean not null default false,
+  -- Countries where a region (state) changes the rules, so it is required before a session.
+  region_required_countries      text[] not null default '{US}'
 );
+
+-- The consent document versions currently in force. Raising a version here
+-- blocks new sessions until each participant consents to the new text.
+create table app_private.required_consents (
+  consent_type text primary key check (consent_type in ('terms', 'privacy', 'pilot_participation', 'age_18_plus')),
+  version      text not null check (char_length(version) between 1 and 32)
+);
+insert into app_private.required_consents values
+  ('terms', '2026-11-01'), ('privacy', '2026-11-01'), ('pilot_participation', '2026-11-01'), ('age_18_plus', '2026-11-01');
 insert into app_private.settings default values;
 
 -- Daily AI budget ledger, one row per day and call kind. The cap is enforced
@@ -116,17 +136,27 @@ create table app_private.ai_reservations (
 create index on app_private.ai_reservations (user_id, day, kind);
 
 -- Safety events: no text, no hash of text. user_id is kept only so a
--- reviewer can follow the duty-of-care protocol in docs/07; it becomes
--- null when the account is deleted, leaving an anonymous count.
+-- reviewer can follow the duty-of-care protocol in docs/07. When an account
+-- is deleted its events are folded into monthly counts by route and the rows
+-- are deleted. A row with only user_id removed is NOT anonymous: its timestamp,
+-- arm and route can be linked back in a 55-person pilot.
 create table app_private.safety_events (
   id          uuid primary key default gen_random_uuid(),
-  user_id     uuid references auth.users(id) on delete set null,
+  user_id     uuid references auth.users(id) on delete cascade,
   occurred_at timestamptz not null default now(),
   route       text not null check (char_length(route) <= 40),
   categories  text[] not null default '{}',
   source      text not null check (source in ('keyword', 'classifier', 'classifier_failure', 'model_escalate', 'user_report')),
   arm         public.app_arm,
   reviewed_at timestamptz
+);
+
+-- What remains of deleted accounts' safety events: counts per month and route only.
+create table app_private.safety_event_counts (
+  month date not null,
+  route text not null check (char_length(route) <= 40),
+  n     int  not null check (n > 0),
+  primary key (month, route)
 );
 
 -- Proof that deletions were honoured. Deliberately holds no identifier.
@@ -147,23 +177,30 @@ create table public.exercises (
   id           text primary key check (id ~ '^[a-z0-9_]{3,40}$'),
   name         text not null check (char_length(name) <= 60),
   duration_sec int  not null check (duration_sec between 30 and 600),
-  version      int  not null default 1,
+  version      int  not null default 1 check (version >= 1),   -- bump whenever the script text changes
   reviewed_by  text,
   reviewed_at  date,
+  reviewed_version int,                                      -- the version the reviewer actually approved
   is_active    boolean not null default false,
-  check (not is_active or (char_length(btrim(coalesce(reviewed_by, ''))) >= 3 and reviewed_at >= date '2026-01-01'))
+  -- A CHECK passes when its expression is NULL, so every part is wrapped in
+  -- coalesce(..., false): a missing date or version can never count as approval.
+  check (not is_active or coalesce(char_length(btrim(reviewed_by)) >= 3
+                                   and reviewed_at >= date '2026-01-01'
+                                   and reviewed_version = version, false))
 );
 insert into public.exercises (id, name, duration_sec) values
   ('long_exhale_breathing', 'Long-exhale breathing', 120),
   ('grounding_54321',       'Grounding 5-4-3-2-1',   120),
-  ('sort_and_step',         'Sort it, then one step', 180);
+  ('sort_and_step',         'Sort it, then one step', 180),
+  ('conversation_reset',    'Three-minute reset before a difficult conversation', 180);
 
 create table public.profiles (
   user_id      uuid primary key references auth.users(id) on delete cascade,
   country_code char(2) check (country_code ~ '^[A-Z]{2}$'),            -- required before a session; no default, so crisis lines are never guessed
-  region       text check (region ~ '^[A-Z]{2}-[A-Z0-9]{1,3}$'),       -- ISO 3166-2, e.g. US-IL; drives the Illinois rule
+  region       text check (region ~ '^[A-Z]{2}-[A-Z0-9]{1,3}$'),       -- ISO 3166-2, e.g. US-IL; self-reported, not verified location
   timezone     text not null default 'UTC' check (char_length(timezone) <= 64),
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+  check (region is null or left(region, 2) = country_code)          -- region must belong to the chosen country
 );
 
 create table public.consents (
@@ -181,7 +218,7 @@ create table public.sessions (
   user_id        uuid not null default auth.uid() references auth.users(id) on delete cascade,
   arm            public.app_arm not null,
   situation      public.app_situation not null,
-  tension_before smallint check (tension_before between 0 and 10),   -- optional; there is no after-score (docs/06 section 3)
+  tension_before smallint check (tension_before between 0 and 10),   -- optional; there is no after-score (docs/06 section B3)
   completed      boolean not null default false,
   started_at     timestamptz not null default now(),
   completed_at   timestamptz,
@@ -276,6 +313,7 @@ create function app_private.current_arm(p_user uuid) returns public.app_arm
 language sql stable security definer set search_path = '' as $$
   select case
     when a.user_id is null then null
+    when not (select st.ai_arm_enabled from app_private.settings st) then 'scripted'::public.app_arm
     when a.arm_override is not null then a.arm_override
     when now() < a.enrolled_at + make_interval(days => a.period_days) then a.first_arm
     when a.first_arm = 'scripted' then 'ai'::public.app_arm
@@ -309,15 +347,18 @@ end; $$;
 create trigger profiles_region_rule after insert or update of region on public.profiles
   for each row execute function app_private.profiles_region_rule();
 
--- True only if the user's LATEST answer to each required consent is 'granted'.
+-- True only if the user's LATEST answer to each required consent is 'granted'
+-- AND was given to the version currently in force.
 create function app_private.has_required_consents(p_user uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
-  select count(*) = 4 from (
-    select distinct on (c.consent_type) c.consent_type, c.granted
+  select count(*) = (select count(*) from app_private.required_consents) from (
+    select distinct on (c.consent_type) c.consent_type, c.granted, c.version
     from public.consents c
-    where c.user_id = p_user and c.consent_type in ('terms', 'privacy', 'pilot_participation', 'age_18_plus')
+    where c.user_id = p_user and c.consent_type in (select consent_type from app_private.required_consents)
     order by c.consent_type, c.recorded_at desc, c.id desc
-  ) latest where latest.granted;
+  ) latest
+  join app_private.required_consents r on r.consent_type = latest.consent_type
+  where latest.granted and latest.version = r.version;
 $$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function app_private.handle_new_user();
@@ -331,6 +372,10 @@ begin
   if not app_private.has_required_consents(new.user_id) then raise exception 'required consent missing or withdrawn'; end if;
   if (select p.country_code from public.profiles p where p.user_id = new.user_id) is null then
     raise exception 'country required before a session (it sets the crisis lines)';
+  end if;
+  if exists (select 1 from public.profiles p, app_private.settings st
+             where p.user_id = new.user_id and p.region is null and p.country_code = any (st.region_required_countries)) then
+    raise exception 'region required before a session in this country (it changes the rules, e.g. Illinois)';
   end if;
   new.started_at := now();
   new.completed_at := null;
@@ -363,6 +408,32 @@ begin
 end; $$;
 create trigger runs_before_insert before insert on public.exercise_runs
   for each row execute function app_private.runs_before_insert();
+
+-- Changing an exercise's content version withdraws approval until it is reviewed again.
+create function app_private.exercises_before_update() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.version <> old.version and new.reviewed_version is distinct from new.version then
+    new.is_active := false;
+  end if;
+  return new;
+end; $$;
+create trigger exercises_before_update before update on public.exercises
+  for each row execute function app_private.exercises_before_update();
+
+-- Account deletion: fold the user's safety events into monthly counts, then delete them.
+create function app_private.fold_safety_events() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into app_private.safety_event_counts (month, route, n)
+    select date_trunc('month', e.occurred_at)::date, e.route, count(*)
+    from app_private.safety_events e where e.user_id = old.id group by 1, 2
+  on conflict (month, route) do update set n = app_private.safety_event_counts.n + excluded.n;
+  delete from app_private.safety_events where user_id = old.id;
+  return old;
+end; $$;
+create trigger fold_safety_events before delete on auth.users
+  for each row execute function app_private.fold_safety_events();
 
 -- The one function users may call: their own current arm. No parameters.
 create function public.my_arm() returns public.app_arm
@@ -457,6 +528,20 @@ returns table (day date, arm public.app_arm, sessions bigint, completed bigint, 
 language sql stable security definer set search_path = '' as $$
   select s.started_at::date, s.arm, count(*), count(*) filter (where s.completed), count(distinct s.user_id)
   from public.sessions s where s.started_at >= p_since group by 1, 2 order by 1, 2;
+$$;
+
+-- Safety summary for the reviewer and any report: counts per month and route,
+-- live and folded together. Cells below p_min_cell are suppressed (null), because
+-- small counts in a 55-person pilot can identify a person.
+create function app_private.safety_summary(p_min_cell int default 5)
+returns table (month date, route text, n bigint)
+language sql stable security definer set search_path = '' as $$
+  select m, r, case when sum(c) >= p_min_cell then sum(c) end
+  from (
+    select date_trunc('month', occurred_at)::date as m, route as r, count(*) as c from app_private.safety_events group by 1, 2
+    union all
+    select month, route, n from app_private.safety_event_counts
+  ) x group by m, r order by m, r;
 $$;
 
 -- Execute rights: explicit and minimal.
