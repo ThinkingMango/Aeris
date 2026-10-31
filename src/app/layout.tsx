@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { HelpFooter } from "@/components/aeris-primitives";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,8 +16,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Aeris design system",
-  description: "A mobile-first component library for a private, no-typing work conversation reset.",
+  title: "Aeris",
+  description: "A private, no-typing reset before a difficult work conversation.",
 };
 
 export const viewport: Viewport = {
@@ -30,8 +31,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable} bg-background`}>
-      <body>{children}</body>
+    <html lang="en" className={`${inter.variable} ${fraunces.variable} bg-background`} data-scroll-behavior="smooth">
+      <body className="font-sans">
+        <div className="app-shell">
+          {children}
+          <HelpFooter />
+        </div>
+      </body>
     </html>
   );
 }

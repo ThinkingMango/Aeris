@@ -10,7 +10,16 @@ import {
   SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
-import resetContent from "@/content/reset_content.json";
+import resetContent from "../../content/reset_content.json";
+import { helplines } from "../../content/helplines";
+import {
+  GhostButton,
+  HelpFooter,
+  ProgressDots,
+  StopButton,
+  SupportButton,
+  TextLink,
+} from "./aeris-primitives";
 
 type Appearance = "system" | "light" | "dark";
 type SortValue = "mine" | "not-mine" | null;
@@ -27,26 +36,6 @@ export function PrimaryButton({
     <button className={`aeris-button aeris-primary ${className}`} {...props}>
       {children}
     </button>
-  );
-}
-
-export function GhostButton({
-  className = "",
-  children,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button className={`aeris-button aeris-ghost ${className}`} {...props}>
-      {children}
-    </button>
-  );
-}
-
-export function TextLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a className="aeris-text-link" href={href}>
-      {children}
-    </a>
   );
 }
 
@@ -249,54 +238,6 @@ export function BreathingCircle({ duration = 10 }: { duration?: number }) {
   );
 }
 
-export function ProgressDots({ current = 2, total = 5 }: { current?: number; total?: number }) {
-  return (
-    <div className="progress-dots" aria-label={`Step ${current} of ${total}`}>
-      <span className="progress-label">Step {current} of {total}</span>
-      <div className="progress-dot-row" aria-hidden="true">
-        {Array.from({ length: total }, (_, index) => (
-          <span
-            key={index}
-            className={`progress-dot${index + 1 === current ? " is-current" : index + 1 < current ? " is-complete" : ""}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function StopButton({ onClick }: { onClick: () => void }) {
-  return <GhostButton onClick={onClick}>Stop</GhostButton>;
-}
-
-export function HelpFooter() {
-  return (
-    <footer className="help-footer">
-      <TextLink href="/help">In danger? Get help now</TextLink>
-      <TextLink href="/more">This is about more than work</TextLink>
-    </footer>
-  );
-}
-
-export function SupportButton({ number = "" }: { number?: string }) {
-  const digits = number.replace(/[^0-9+]/g, "");
-  const unavailable = !number.trim() || number.includes("[") || !/\d/.test(digits);
-
-  if (unavailable) {
-    return (
-      <button type="button" className="support-button" disabled>
-        Number to be confirmed
-      </button>
-    );
-  }
-
-  return (
-    <a className="support-button" href={`tel:${digits}`}>
-      Call for support
-    </a>
-  );
-}
-
 function AppearanceSettings({
   appearance,
   onChange,
@@ -457,7 +398,7 @@ function ThemeBoard({ theme }: { theme: "light" | "dark" }) {
 
         <section className="component-section" aria-labelledby={`${theme}-support-title`}>
           <h3 id={`${theme}-support-title`}>SupportButton</h3>
-          <SupportButton />
+          <SupportButton number={helplines.emergencyNumber} />
         </section>
 
         <section className="component-section" aria-labelledby={`${theme}-stop-title`}>
