@@ -17,12 +17,10 @@ import { GhostButton, ProgressDots, StopButton, TextLink } from "@/components/ae
 
 type ConversationType = (typeof resetContent.types)[number];
 type ResetStep = ConversationType["steps"][number];
-type SavedStepSelection = { step: ResetStep; openerIndex: number | null };
+type SavedStepSelection = { step: ResetStep; openerText: string | null };
 type SortValue = "mine" | "not-mine";
 type BreathingOrigin = 1 | 5;
 
-const savedSteps = resetContent.types.flatMap(({ steps }) => steps);
-const maximumOpenerCount = Math.max(...resetContent.types.map(({ openers }) => openers.length));
 const feedbackChoices = [
   { id: "yes", label: "Yes" },
   { id: "a-bit", label: "A bit" },
@@ -32,34 +30,41 @@ const feedbackChoices = [
 const readSavedStep = (serialized: string | null): SavedStepSelection | null => {
   if (!serialized) return null;
 
-  let stepId = serialized;
-  let openerIndex: number | null = null;
-
   try {
     const value: unknown = JSON.parse(serialized);
     if (
-      value &&
-      typeof value === "object" &&
-      "stepId" in value &&
-      typeof value.stepId === "string"
+      !value ||
+      typeof value !== "object" ||
+      !("typeId" in value) ||
+      typeof value.typeId !== "string" ||
+      !("stepId" in value) ||
+      typeof value.stepId !== "string"
     ) {
-      stepId = value.stepId;
-      const storedIndex = "openerIndex" in value ? value.openerIndex : null;
-      if (
-        typeof storedIndex === "number" &&
-        Number.isInteger(storedIndex) &&
-        storedIndex >= 0 &&
-        storedIndex < maximumOpenerCount
-      ) {
-        openerIndex = storedIndex;
-      }
+      return null;
     }
-  } catch {
-    // Older saved steps contain only the plain step id.
-  }
 
-  const step = savedSteps.find(({ id }) => id === stepId);
-  return step ? { step, openerIndex: step.id === "opener" ? openerIndex : null } : null;
+    const type = resetContent.types.find(({ id }) => id === value.typeId);
+    const step = type?.steps.find(({ id }) => id === value.stepId);
+    if (!type || !step) return null;
+
+    if (step.id === "opener") {
+      const openerIndex = "openerIndex" in value ? value.openerIndex : null;
+      if (
+        typeof openerIndex !== "number" ||
+        !Number.isInteger(openerIndex) ||
+        openerIndex < 0 ||
+        openerIndex >= type.openers.length
+      ) {
+        return null;
+      }
+
+      return { step, openerText: type.openers[openerIndex] };
+    }
+
+    return "openerIndex" in value ? null : { step, openerText: null };
+  } catch {
+    return null;
+  }
 };
 
 export default function ResetPage() {
@@ -79,6 +84,8 @@ export default function ResetPage() {
   const optionStepButtons = useRef<(HTMLButtonElement | null)[]>([]);
   const openerButtons = useRef<(HTMLButtonElement | null)[]>([]);
   const copyTimeoutRef = useRef<number | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const previousStepRef = useRef(currentStep);
 
   useEffect(() => {
     try {
@@ -87,6 +94,15 @@ export default function ResetPage() {
       setSavedStep(null);
     }
   }, []);
+
+  useEffect(() => {
+    if (previousStepRef.current === currentStep) return;
+
+    previousStepRef.current = currentStep;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    headingRef.current?.focus({ preventScroll: true });
+  }, [currentStep]);
 
   useEffect(() => {
     if (currentStep !== 6) return;
@@ -272,14 +288,19 @@ export default function ResetPage() {
   const saveChosenStep = () => {
     if (!selectedType || !canChooseStep || !chosenStep) return;
 
-    const storedValue: { stepId: string; openerIndex?: number } = { stepId: chosenStep.id };
-    if (chosenStep.id === "opener" && selectedOpenerIndex !== null) {
+    const storedValue: { typeId: string; stepId: string; openerIndex?: number } = {
+      typeId: selectedType.id,
+      stepId: chosenStep.id,
+    };
+    const openerText = chosenStep.id === "opener" ? chosenOpener : null;
+    if (chosenStep.id === "opener") {
+      if (selectedOpenerIndex === null || openerText === null) return;
       storedValue.openerIndex = selectedOpenerIndex;
     }
 
     try {
       window.localStorage.setItem("aeris.savedStep", JSON.stringify(storedValue));
-      setSavedStep({ step: chosenStep, openerIndex: storedValue.openerIndex ?? null });
+      setSavedStep({ step: chosenStep, openerText });
       setSaveError(false);
     } catch {
       setSaveError(true);
@@ -296,7 +317,7 @@ export default function ResetPage() {
       <div className="reset-content">
         {currentStep === 1 ? (
           <section className="reset-screen">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               A difficult conversation ahead?
             </h1>
             <p className="screen-caption">Private. What you choose stays on this phone.</p>
@@ -305,7 +326,7 @@ export default function ResetPage() {
               <div className="saved-step-block">
                 <StepCard
                   title="Your saved step"
-                  detail={`${savedStep.step.title} — ${savedStep.step.detail}`}
+                  detail={`${savedStep.step.title} — ${savedStep.openerText ?? savedStep.step.detail}`}
                 />
                 <div className="saved-step-actions">
                   <TextLink onClick={deleteSavedStep}>Delete</TextLink>
@@ -326,7 +347,7 @@ export default function ResetPage() {
 
         {currentStep === 2 ? (
           <section className="reset-screen">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               What kind of conversation?
             </h1>
             <div
@@ -360,7 +381,7 @@ export default function ResetPage() {
 
         {currentStep === 3 ? (
           <section className="reset-screen">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               What&apos;s weighing on you most?
             </h1>
             <p className="screen-caption">Pick up to two, or skip.</p>
@@ -401,7 +422,7 @@ export default function ResetPage() {
 
         {currentStep === 4 && selectedType ? (
           <section className="reset-screen">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               Which of these can you control?
             </h1>
             <p className="screen-caption">Tap Mine or Not mine for each.</p>
@@ -429,12 +450,15 @@ export default function ResetPage() {
                 Skip
               </GhostButton>
             </div>
+            <div className="reset-navigation">
+              <TextLink onClick={() => setCurrentStep(3)}>Back</TextLink>
+            </div>
           </section>
         ) : null}
 
         {currentStep === 5 && selectedType ? (
           <section className="reset-screen">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               One first step.
             </h1>
             <div
@@ -518,12 +542,15 @@ export default function ResetPage() {
                 One minute of breathing first
               </TextLink>
             </div>
+            <div className="reset-navigation">
+              <TextLink onClick={() => setCurrentStep(4)}>Back</TextLink>
+            </div>
           </section>
         ) : null}
 
         {currentStep === 6 ? (
           <section className="reset-screen">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               {breathingOrigin === 1 ? "Breathe first (1 minute)" : "One minute of breathing first"}
             </h1>
             {breathingComplete ? (
@@ -553,7 +580,7 @@ export default function ResetPage() {
 
         {currentStep === 7 && selectedType && chosenStep ? (
           <section className="reset-screen" aria-labelledby="reset-heading">
-            <h1 id="reset-heading" className="screen-heading font-serif">
+            <h1 ref={headingRef} tabIndex={-1} id="reset-heading" className="screen-heading font-serif">
               Your first step:
             </h1>
             <StepCard title={chosenStep.title} detail={chosenOpener ?? chosenStep.detail} />
@@ -569,6 +596,9 @@ export default function ResetPage() {
               <PrimaryButton type="button" onClick={stopReset}>
                 Done
               </PrimaryButton>
+            </div>
+            <div className="reset-navigation">
+              <TextLink onClick={() => setCurrentStep(5)}>Back</TextLink>
             </div>
             <section className="reset-feedback" aria-labelledby="reset-feedback-heading">
               <h2 id="reset-feedback-heading">Did this help you prepare?</h2>
