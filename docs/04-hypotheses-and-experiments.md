@@ -148,6 +148,8 @@ This sets the bar.
 | Revise | 3–4 of 8 choose Aeris. Fix what people named and retest with 5 new people |
 | Stop or rethink | 2 or fewer choose Aeris, especially if they choose a general chatbot |
 
+**How to run it.** Session by session, with the script, consent wording, order schedule and recording sheet: [13](13-d3-facilitator-guide.md).
+
 **Cannot tell you.** Whether people will come back on their own. That is Stage 3.
 
 ### D4 — Landing page and one partner demonstration
