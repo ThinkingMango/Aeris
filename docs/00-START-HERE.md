@@ -28,6 +28,7 @@
 | 10 | [Law and regulation](10-regulatory.md) | What the statutes say, how they might apply, questions for a lawyer | 15 min |
 | 11 | [Economics](11-economics.md) | Cohort model: break-even, months to break even, revenue targets, three business models | 10 min |
 | 12 | [v0 prompts](12-v0-prompts.md) | Copy-and-paste prompts for the prototype | Reference |
+| 13 | [D3 facilitator guide](13-d3-facilitator-guide.md) | How to run the Aeris-versus-usual-way sessions: checklist, order, script, consent, recording sheet, what to do if something goes wrong | Before D3 |
 | — | [decisions.md](decisions.md) | Decisions as they are made, with dates and evidence | Living |
 
 ## Verify instead of trusting
