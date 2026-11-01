@@ -332,4 +332,13 @@ Short, tap-first sessions; optional typing; a small fixed exercise library; a gu
 | H5 | **v0 added a test that required the help lines to stay placeholders.** It would have failed the moment real, verified numbers were entered before D3 | Medium: it punishes the safe action | Fixed. The test now accepts a placeholder or a well-formed number, and `AERIS_D3_READY=1` adds a check that fails while any placeholder remains |
 | H6 | v0 moved the content file to `content/` and left a second copy in `src/content/` | Low: two copies drift | Old copy deleted; `content/reset_content.json` is the only source |
 
+**Follow-up (1 November 2026).** v0 applied R7 on branch `v0/aeris-reset-issues` (a4faaa7). It changed only `src/app/page.tsx` and `src/app/reset/page.tsx`. When merged with current `main`:
+- `npm run test:e2e` passes 15 of 15;
+- the content and safety checks pass 93, with 1 skipped by design;
+- the type-check is clean.
+
+H1–H4 are fixed. Three tests were added for H2 and for Back keeping earlier choices: "a new step starts at the top with focus on its heading" (with and without reduced motion) and "Back keeps earlier choices". All three **fail on the code before R7** and pass after it, so they would have caught the bugs.
+
+One caveat: v0's branch was created from `main` as it stood before #12. Compared with today's `main`, it therefore *looks* as if it deletes the browser tests and Part H. It does not: its own commit touches only the two app files, and the branch merges cleanly.
+
 **Process note.** v0 merged straight to `main`, without the review step [05](05-discovery-and-build-plan.md) asked for. It caused no harm this time, because the existing tests still pass. From now on, the browser tests are the bar for any v0 change.

@@ -136,7 +136,7 @@ Follow the AERIS RULES. Fix these four problems, found by automated browser test
 4. When the step changes, scroll the page to the top and move keyboard focus to the new step's h1 (give it tabIndex={-1}), so the heading is never hidden under the sticky Stop bar and screen readers announce the new step. Respect reduced motion: no smooth scrolling when it is on.
 ```
 
-**Check it worked.** Push to a branch and ask Claude Code to run `npm run test:e2e`. It should report 12 of 12 passing.
+**Check it worked.** Push to a branch and ask Claude Code to run `npm run test:e2e`. It should report 15 of 15 passing. v0 applied R7 on branch `v0/aeris-reset-issues` (commit a4faaa7), and the result was 15 of 15.
 
 ---
 

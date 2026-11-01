@@ -228,3 +228,59 @@ test("reduced motion: the breathing circle does not move", async () => {
   assert.equal(moving, 0, "no transform animations with reduced motion");
   assert.equal(scaled, false, "nothing in the breathing circle should be scaled with reduced motion");
 });
+
+for (const motion of ["no-preference", "reduce"]) {
+  test(`a new step starts at the top with focus on its heading (motion: ${motion})`, async () => {
+    const { ctx, page } = await phone({ reducedMotion: motion });
+    const type = content.types[0];
+    await page.goto(BASE + "/reset");
+    await click(page, "Start the 3-minute reset");
+    await click(page, type.label);
+    await click(page, "Skip");
+    await click(page, "Skip");
+    await page.getByText(type.steps[0].title, { exact: true }).click();
+    await page.getByText(type.openers[2], { exact: true }).click();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await click(page, "That's my step");
+    await page.waitForTimeout(motion === "reduce" ? 200 : 1200);
+    const state = await page.evaluate(() => {
+      const h1 = document.querySelector("main h1");
+      const bar = document.querySelector(".reset-topbar");
+      return {
+        scrollY: Math.round(window.scrollY),
+        focused: document.activeElement === h1,
+        heading: h1?.textContent?.trim(),
+        clear: h1 && bar ? h1.getBoundingClientRect().top >= bar.getBoundingClientRect().bottom - 1 : false,
+      };
+    });
+    await ctx.close();
+    assert.equal(state.heading, "Your first step:");
+    assert.equal(state.scrollY, 0, "the new step should start at the top");
+    assert.ok(state.focused, "keyboard and screen-reader focus should move to the new heading");
+    assert.ok(state.clear, "the heading must not sit under the sticky Stop bar");
+  });
+}
+
+test("Back keeps earlier choices (A3 worries, A4 sorting, A5 step)", async () => {
+  const { ctx, page } = await phone();
+  const type = content.types[1];
+  await page.goto(BASE + "/reset");
+  await click(page, "Start the 3-minute reset");
+  await click(page, type.label);
+  await click(page, "Saying it badly");
+  await click(page, "Next");
+  await page.getByRole("button", { name: /^Mine/ }).first().click();
+  await click(page, "Back");
+  const worryKept = await page.locator("main [aria-pressed='true']").count();
+  await click(page, "Next");
+  const sortKept = await page.locator(".reset-sort-list [aria-pressed='true']").count();
+  await click(page, "Skip");
+  await page.getByText(type.steps[1].title, { exact: true }).click();
+  await click(page, "That's my step");
+  await click(page, "Back");
+  const stepKept = await page.locator("main [aria-checked='true']").count();
+  await ctx.close();
+  assert.equal(worryKept, 1, "A3 choice should survive Back from A4");
+  assert.equal(sortKept, 1, "A4 sorting should survive Back and Next");
+  assert.equal(stepKept, 1, "A5 choice should survive Back from A7");
+});
