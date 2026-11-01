@@ -14,7 +14,8 @@
     "test:safety": "node --experimental-strip-types --no-warnings --test src/safety/controller.test.ts src/content/content.test.ts",
     "test:db": "bash supabase/tests/run_local.sh",
     "test:db:mutations": "bash supabase/tests/mutation_check.sh",
-    "test": "npm run test:safety && npm run test:db"
+    "test": "npm run test:safety && npm run test:db",
+    "test:e2e": "next build && node --test tests/e2e/prototype.test.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

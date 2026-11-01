@@ -302,3 +302,34 @@ Short, tap-first sessions; optional typing; a small fixed exercise library; a gu
 | G12 | A content-writing task was missing from the plan. The cards should use the words D1 interviewees actually used | Added to Stage 2 in [05](05-discovery-and-build-plan.md): revise the content file after D1, then rerun the tests |
 
 **Still not checked by any test.** Whether v0's generated code obeys the rules. Only the content file is tested today. When the v0 code is pushed to a branch, the review step in [05](05-discovery-and-build-plan.md) Stage 2 should add browser tests for rules 1, 2, 4, 5, 6, 9 and 10.
+
+---
+
+## Part H — First review of the v0 prototype code (31 October 2026, against commit 902bb46)
+
+**What was reviewed.** v0 built R1–R4 and R6 and merged them straight into this repository, through pull requests #6–#11, rather than into a separate repository. The review added browser tests (`tests/e2e/prototype.test.mjs`). They click through every conversation type in Chromium at 390 × 844 pixels, in light and dark mode and with reduced motion. A separate audit also measured contrast and tap-target sizes.
+
+**What passed.** The app type-checks and builds. In all five full flows:
+- there are no text inputs;
+- **no network request is made once the reset is loaded**;
+- there is no red, and no text under 14 pixels;
+- every button and link is at least 56 pixels tall;
+- text contrast meets WCAG minimums in both themes;
+- nothing is pre-selected on A3, A4, A5 or A7;
+- every card, step and opener comes from the content file, and A3 choices bring their cards to the top;
+- Stop returns to the start and clears all choices;
+- placeholder help numbers cannot be dialled;
+- the breathing circle does not move when reduced motion is on.
+
+**Problems found**
+
+| # | Problem | Severity | Disposition |
+|---|---|---|---|
+| H1 | **The saved step comes back wrong.** The step id "opener" exists in all five conversation types, but only the id was saved, so A1 always showed the "Giving hard feedback" step and never showed the chosen sentence | High: it breaks the only thing the app keeps for the person | v0 fix prompt R7; test "a saved opener comes back…" |
+| H2 | **Moving to a new step keeps the old scroll position.** A5 opens 150 pixels down. On A7 the heading sits under the sticky Stop bar, and keyboard focus stays on the previous screen | Medium: usability and accessibility | R7; verified by screenshot (no automated test yet) |
+| H3 | **No Back on A4, A5 or A7** | Medium: the spec says the user is in control | R7; test "every reset step after A1 offers Back" |
+| H4 | **"/" is blank** (this came from our own R1 prompt) | Low | R1 corrected; R7; test "home page is not blank" |
+| H5 | **v0 added a test that required the help lines to stay placeholders.** It would have failed the moment real, verified numbers were entered before D3 | Medium: it punishes the safe action | Fixed. The test now accepts a placeholder or a well-formed number, and `AERIS_D3_READY=1` adds a check that fails while any placeholder remains |
+| H6 | v0 moved the content file to `content/` and left a second copy in `src/content/` | Low: two copies drift | Old copy deleted; `content/reset_content.json` is the only source |
+
+**Process note.** v0 merged straight to `main`, without the review step [05](05-discovery-and-build-plan.md) asked for. It caused no harm this time, because the existing tests still pass. From now on, the browser tests are the bar for any v0 change.

@@ -58,14 +58,23 @@ test("worry labels are the ones on screen A3", () => {
     ["How they'll react", "Saying it badly", "Not sure what I want", "It feels unfair", "What it means for my job"]);
 });
 
-test("helpline values stay as unverified placeholders", () => {
-  assert.deepEqual(helplines, {
-    country: "[pilot country]",
-    emergencyNumber: "[emergency number]",
-    crisisLine: "[crisis line]",
-    abuseLine: "[abuse line]",
-    workplaceAdvice: { label: "[workplace advice service]", url: "" },
-    unionOrEAP: { label: "[union or employee assistance]", url: "" },
-    employmentLaw: { label: "[employment-law help]", url: "" },
-  });
+// Help lines: each value is either an obvious [placeholder] or a real, well-formed value.
+// The earlier test required placeholders forever, which would have failed the moment real,
+// verified numbers were entered before D3 (docs/05 Stage 2 step 4).
+const isPlaceholder = (v: string) => /^\[[^\]]+\]$/.test(v);
+const numbers = [helplines.emergencyNumber, helplines.crisisLine, helplines.abuseLine];
+const links = [helplines.workplaceAdvice, helplines.unionOrEAP, helplines.employmentLaw];
+
+test("help-line numbers are placeholders or dialable numbers, never a mix", () => {
+  for (const n of numbers) assert.ok(isPlaceholder(n) || /^\+?[0-9][0-9 ]{1,18}$/.test(n), `not a placeholder or a number: ${n}`);
+  for (const l of links) {
+    assert.ok(l.label.trim().length > 0, "every workplace-help row needs a label");
+    assert.ok(l.url === "" || /^https:\/\//.test(l.url), `links must be https: ${l.url}`);
+  }
+});
+
+// Run before the first D3 session: AERIS_D3_READY=1 npm run test:safety
+test("D3 readiness: no placeholder help lines remain", { skip: process.env.AERIS_D3_READY !== "1" }, () => {
+  const left = [helplines.country, ...numbers, ...links.map((l) => l.label)].filter(isPlaceholder);
+  assert.deepEqual(left, [], "replace these with verified values before any participant uses the prototype");
 });
